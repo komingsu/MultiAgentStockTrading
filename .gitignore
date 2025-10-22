@@ -1,0 +1,7 @@
+*.pt
+*.csv
+*.zip
+*.env
+# ignore stray keys
+id_ed25519*
+ghp_*
