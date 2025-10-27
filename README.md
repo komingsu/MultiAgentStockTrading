@@ -1,8 +1,14 @@
 # stockRL
 
-한국 주식 데이터를 기반으로 강화학습형 트레이딩 실험을 구성한 저장소입니다. `build_kis_dataset.py`로 최신 데이터를 수집/전처리하고, `scripts/run_experiment.py`로 5개의 DRL 에이전트(A2C, DDPG, PPO, TD3, SAC)와 앙상블 전략을 일괄 학습/평가할 수 있습니다.
+강화학습 기반 한국 주식 트레이딩 연구용 저장소입니다. KIS/KRX 데이터를 `build_kis_dataset.py`로 준비하고, 단일 DRL 에이전트를 원하는 만큼 반복 학습하는 구조입니다.
 
-## 데이터 재구성
+## 환경 요약
+- Python 3.10 이상 (권장 3.11)
+- 주요 의존성: stable-baselines3, gymnasium, numpy, pandas, matplotlib
+- 데이터 파일: `data/train_data.csv`, `data/stock_test_data.csv`, `data/trade_data.csv`
+
+## 학습 파이프라인
+### 1. 데이터 재구성 (선택)
 ```bash
 python build_kis_dataset.py \
   --start 2023-01-01 --end 2025-10-21 \
@@ -11,31 +17,67 @@ python build_kis_dataset.py \
   --trade-start 2025-05-01 --trade-end 2025-08-31 \
   --backtest-end 2025-10-21
 ```
-> `config.py`에 정의된 분할 구간을 사용하면 위 인자 없이 실행해도 동일한 결과를 얻습니다.
+(인자를 생략하면 `config.py`의 기본 분할 사용)
 
-## 학습/실험 실행
-5개의 에이전트를 충분히 학습하고 연속 백테스트 및 앙상블 평가까지 수행하려면 다음과 같이 실행합니다.
+### 2. 단일 에이전트 학습
 ```bash
-python scripts/run_experiment.py --experiment-name <실험이름>
+python scripts/run_train_agent.py \
+  --algo ppo \
+  --experiment-name exp_ppo
 ```
-- `--experiment-name`은 결과가 저장될 폴더 이름입니다. 지정하지 않으면 타임스탬프가 자동 할당됩니다.
-- `--output-root`(기본값 `experiments`) 아래에 `<실험이름>/` 구조로 **모델 체크포인트**, **SB3 로그**, **결과 CSV/PNG**, **단일 `.log` 파일**이 정리됩니다.
-- `--timesteps-scale`을 사용하면 학습 스텝을 일괄적으로 스케일링할 수 있습니다(예: `0.1`은 빠른 리허설, 기본값 `1.0`).
-- 옵션으로 `--turbulence-threshold` 등도 조정 가능합니다.
+- 지원 알고리즘: `a2c`, `ddpg`, `ppo`, `sac`, `td3`
+- 옵션:
+  - `--timesteps-scale`, `--total-timesteps`: 학습 스텝 조정
+  - `--turbulence-threshold`: trade 평가 시 임계치 지정
+- 결과: `experiments/exp_ppo/` 아래에 모델(`models/agent_ppo.zip`), test/trade 자산 CSV·PNG, 로그(`logs/experiment.log`) 저장
 
-TensorBoard 또는 pyfolio를 설치하면(선택 사항) 로그 시각화와 추가 성능 지표를 자동으로 저장합니다.
+### 랜덤 초기 포트폴리오
+학습 에피소드마다 `hyperparams.py`에 정의된 규칙으로 초기 상태를 샘플링합니다.
+- 총자본 1억: 현금 5천만 + 주식 목표 5천만
+- 초기 보유 종목 3~8개, 종목당 최대 25% 가치 캡
+- 남는 금액은 현금으로 유지
 
-## 폴더 구조
-- `build_kis_dataset.py` : KIS API에서 일별 시세를 수집하고 기술지표, VIX, 터뷸런스를 계산해 `data/`에 저장.
-- `config.py` : 데이터 분할 구간, 사용 지표, 대상 종목 목록 및 모델 하이퍼파라미터 정의.
-- `data/` : 최신 전처리 결과 (train/test/trade/backtest, `kis_full_data.csv`, `vix_daily.csv`, `turbulence_daily.csv`).
-- `env.py` : 강화학습 환경 정의. 모든 중간 산출물을 `config.RESULTS_DIR` 경로 아래로 저장.
-- `helper_function.py` : 기술지표 계산, 데이터 스플릿, 베이스라인 지표 계산 유틸리티.
-- `models.py` : Stable-Baselines3 에이전트 래퍼, 학습/예측 함수, 앙상블 전략 구현.
+## 액션 추론 CLI
+이미 학습된 모델로 현재 보유 상태에서 다음 액션을 추론할 수 있습니다.
+```bash
+python scripts/infer_action.py \
+  --experiment experiments/exp_ppo \
+  --algo ppo \
+  --cash 25000000 \
+  --holdings holdings.json \
+  --date 2025-08-29
+```
+- `holdings`는 파일 경로 또는 JSON 문자열 (`{"005930": 120, ...}`)
+- 미지정 시 `data/trade_data.csv` 마지막 날짜 사용
+- 출력: 원 액션, 실행 액션, 체결 후 수량, 현금/총자산 변화
+
+## 하이퍼파라미터 관리
+`hyperparams.py`
+- `DEFAULT_ALGO_CONFIG`: 각 알고리즘 timesteps 및 SB3 인자
+- `ENV_PARAMS`: `hmax`, 거래비용, 보상 스케일
+- `PORTFOLIO_INIT`: 초기 포트폴리오 총액·현금 비중·종목수 범위·티커별 캡
+수정 시 학습/추론/환경이 자동으로 반영됩니다.
+
+## 소스 구조
+- `config.py` : 데이터 기간, 지표 목록, 공통 경로
+- `hyperparams.py` : 모든 하이퍼파라미터
+- `env.py` : Gymnasium 환경 + 랜덤 초기 포트폴리오 로직
+- `train.py` : 실험 디렉터리/로그 관리, 단일 에이전트 학습/평가 유틸
+- `models.py` : SB3 에이전트 래퍼(get/train/predict)
 - `scripts/`
-  - `run_experiment.py` : 5개 에이전트 학습 → 트레이드 백테스트 → 앙상블 전략 → 시각화/로그를 자동 수행하는 CLI.
-- `experiments/` : 각 실험의 산출물이 생성되는 루트 디렉터리 (커밋에는 `.gitkeep`만 포함).
-- `kis_auth.py`, `refresh_kis_token.py` : KIS API 토큰 관리.
-- `p3.ipynb`, `make_dataset.ipynb` : 기존 실험 노트북(참고용).
+  - `run_train_agent.py` : 학습/평가 CLI
+  - `infer_action.py` : 보유 상태 → 액션 추론 CLI
+- `vis_util.py` : 자산 곡선 시각화
+- `data/` : 전처리된 CSV
+- `experiments/` : 실험 산출물
 
-필요 없는 임시 산출물과 디버그 디렉터리는 정리되었으며, 새 실험을 실행하면 `experiments/<실험이름>/` 아래에 결과가 깔끔하게 정리됩니다.
+## 로그 및 산출물
+- 학습/평가지표는 `logs/experiment.log`에 `metric|value|step` 형식으로 누적 (SB3 `progress.csv` 없음)
+- Test/Trade 평가 결과는 `results/` CSV + `plots/` PNG
+
+## 기타 스크립트
+- `helper_function.py` : 지표 계산, 데이터 스플릿 유틸
+- `kis_auth.py`, `refresh_kis_token.py` : KIS 인증/토큰 관리
+- `build_kis_dataset.py` : KIS API 기반 데이터 빌더
+
+필요 시 `PORTFOLIO_INIT` 값을 조정하거나 `run_train_agent.py`를 반복 실행해 다양한 모델을 얻으세요.

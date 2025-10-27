@@ -5,3 +5,6 @@
 # ignore stray keys
 id_ed25519*
 ghp_*
+__pycache__/
+*/__pycache__/
+WORKLOG/

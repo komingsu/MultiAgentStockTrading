@@ -1,0 +1,222 @@
+2025-10-26 18:22:38,818|INFO|log_path|experiments/overnight_ddpg/logs/experiment.log
+2025-10-26 18:22:38,819|INFO|selected_algo|DDPG|timesteps|100000
+2025-10-26 18:22:38,898|INFO|train_algo|DDPG|timesteps|100000
+2025-10-26 18:22:38,898|INFO|{'batch_size': 128, 'buffer_size': 50000, 'learning_rate': 0.001, 'tau': 0.001, 'gamma': 0.99}
+2025-10-26 18:22:38,965|INFO|Using cuda device
+2025-10-26 18:23:00,035|INFO|time/episodes|4 | time/fps|97 | time/time_elapsed|20 | time/total_timesteps|1956 | train/actor_loss|-0.07271714508533478 | train/critic_loss|0.0028427792713046074 | train/learning_rate|0.001 | train/n_updates|1855 | train/reward|0.009926659055054188 | step|1956
+2025-10-26 18:23:16,973|INFO|time/episodes|8 | time/fps|105 | time/time_elapsed|36 | time/total_timesteps|3912 | train/actor_loss|-0.14026057720184326 | train/critic_loss|0.0020067004952579737 | train/learning_rate|0.001 | train/n_updates|3811 | train/reward|-0.013295813463628292 | step|3912
+2025-10-26 18:23:21,158|INFO|day: 488, episode: 10
+2025-10-26 18:23:21,158|INFO|begin_total_asset: 99702290.00
+2025-10-26 18:23:21,159|INFO|end_total_asset: 698695655.46
+2025-10-26 18:23:21,159|INFO|total_reward: 598993365.46
+2025-10-26 18:23:21,159|INFO|total_cost: 8713779.55
+2025-10-26 18:23:21,159|INFO|total_trades: 7307
+2025-10-26 18:23:21,159|INFO|Sharpe: 2.389
+2025-10-26 18:23:21,160|INFO|=================================
+2025-10-26 18:23:37,170|INFO|time/episodes|12 | time/fps|102 | time/time_elapsed|57 | time/total_timesteps|5868 | train/actor_loss|-0.2713819146156311 | train/critic_loss|0.0028836128767579794 | train/learning_rate|0.001 | train/n_updates|5767 | train/reward|0.0069323210045695305 | step|5868
+2025-10-26 18:23:53,476|INFO|time/episodes|16 | time/fps|106 | time/time_elapsed|73 | time/total_timesteps|7824 | train/actor_loss|-0.38858020305633545 | train/critic_loss|0.0020234191324561834 | train/learning_rate|0.001 | train/n_updates|7723 | train/reward|-0.005370608065277338 | step|7824
+2025-10-26 18:24:08,880|INFO|day: 488, episode: 20
+2025-10-26 18:24:08,881|INFO|begin_total_asset: 74501150.00
+2025-10-26 18:24:08,881|INFO|end_total_asset: 248409513.85
+2025-10-26 18:24:08,881|INFO|total_reward: 173908363.85
+2025-10-26 18:24:08,881|INFO|total_cost: 11147671.15
+2025-10-26 18:24:08,881|INFO|total_trades: 7091
+2025-10-26 18:24:08,882|INFO|Sharpe: 1.700
+2025-10-26 18:24:08,882|INFO|=================================
+2025-10-26 18:24:12,895|INFO|time/episodes|20 | time/fps|105 | time/time_elapsed|92 | time/total_timesteps|9780 | train/actor_loss|-0.4670652151107788 | train/critic_loss|0.0031939768232405186 | train/learning_rate|0.001 | train/n_updates|9679 | train/reward|0.6461421251296997 | step|9780
+2025-10-26 18:24:28,895|INFO|time/episodes|24 | time/fps|107 | time/time_elapsed|108 | time/total_timesteps|11736 | train/actor_loss|-0.5977977514266968 | train/critic_loss|0.0030396359506994486 | train/learning_rate|0.001 | train/n_updates|11635 | train/reward|0.4810311794281006 | step|11736
+2025-10-26 18:24:48,272|INFO|time/episodes|28 | time/fps|106 | time/time_elapsed|128 | time/total_timesteps|13692 | train/actor_loss|-0.7613124847412109 | train/critic_loss|0.0026012021116912365 | train/learning_rate|0.001 | train/n_updates|13591 | train/reward|0.28572165966033936 | step|13692
+2025-10-26 18:24:52,331|INFO|day: 488, episode: 30
+2025-10-26 18:24:52,332|INFO|begin_total_asset: 75867250.00
+2025-10-26 18:24:52,332|INFO|end_total_asset: 793752107.67
+2025-10-26 18:24:52,332|INFO|total_reward: 717884857.67
+2025-10-26 18:24:52,332|INFO|total_cost: 18875282.33
+2025-10-26 18:24:52,332|INFO|total_trades: 7239
+2025-10-26 18:24:52,333|INFO|Sharpe: 2.703
+2025-10-26 18:24:52,333|INFO|=================================
+2025-10-26 18:25:04,426|INFO|time/episodes|32 | time/fps|108 | time/time_elapsed|144 | time/total_timesteps|15648 | train/actor_loss|-0.7424426078796387 | train/critic_loss|0.002607676200568676 | train/learning_rate|0.001 | train/n_updates|15547 | train/reward|0.1685187816619873 | step|15648
+2025-10-26 18:25:23,992|INFO|time/episodes|36 | time/fps|107 | time/time_elapsed|163 | time/total_timesteps|17604 | train/actor_loss|-0.8985646367073059 | train/critic_loss|0.0018163931090384722 | train/learning_rate|0.001 | train/n_updates|17503 | train/reward|0.1316472589969635 | step|17604
+2025-10-26 18:25:36,189|INFO|day: 488, episode: 40
+2025-10-26 18:25:36,189|INFO|begin_total_asset: 99133530.00
+2025-10-26 18:25:36,189|INFO|end_total_asset: 680118854.99
+2025-10-26 18:25:36,189|INFO|total_reward: 580985324.99
+2025-10-26 18:25:36,189|INFO|total_cost: 16737565.01
+2025-10-26 18:25:36,190|INFO|total_trades: 7715
+2025-10-26 18:25:36,190|INFO|Sharpe: 2.354
+2025-10-26 18:25:36,190|INFO|=================================
+2025-10-26 18:25:40,302|INFO|time/episodes|40 | time/fps|108 | time/time_elapsed|180 | time/total_timesteps|19560 | train/actor_loss|-1.015998125076294 | train/critic_loss|0.00158957508392632 | train/learning_rate|0.001 | train/n_updates|19459 | train/reward|0.2592261731624603 | step|19560
+2025-10-26 18:26:00,070|INFO|time/episodes|44 | time/fps|107 | time/time_elapsed|200 | time/total_timesteps|21516 | train/actor_loss|-1.124873399734497 | train/critic_loss|0.001928667537868023 | train/learning_rate|0.001 | train/n_updates|21415 | train/reward|0.28860458731651306 | step|21516
+2025-10-26 18:26:16,233|INFO|time/episodes|48 | time/fps|108 | time/time_elapsed|216 | time/total_timesteps|23472 | train/actor_loss|-1.166398286819458 | train/critic_loss|0.0032075082417577505 | train/learning_rate|0.001 | train/n_updates|23371 | train/reward|0.2137986421585083 | step|23472
+2025-10-26 18:26:23,488|INFO|day: 488, episode: 50
+2025-10-26 18:26:23,489|INFO|begin_total_asset: 99957850.00
+2025-10-26 18:26:23,489|INFO|end_total_asset: 934750720.23
+2025-10-26 18:26:23,490|INFO|total_reward: 834792870.23
+2025-10-26 18:26:23,490|INFO|total_cost: 17022309.77
+2025-10-26 18:26:23,490|INFO|total_trades: 7971
+2025-10-26 18:26:23,490|INFO|Sharpe: 2.944
+2025-10-26 18:26:23,490|INFO|=================================
+2025-10-26 18:26:36,198|INFO|time/episodes|52 | time/fps|107 | time/time_elapsed|236 | time/total_timesteps|25428 | train/actor_loss|-1.1935105323791504 | train/critic_loss|0.002099524484947324 | train/learning_rate|0.001 | train/n_updates|25327 | train/reward|0.31797927618026733 | step|25428
+2025-10-26 18:26:52,741|INFO|time/episodes|56 | time/fps|108 | time/time_elapsed|252 | time/total_timesteps|27384 | train/actor_loss|-1.499251365661621 | train/critic_loss|0.0020086525473743677 | train/learning_rate|0.001 | train/n_updates|27283 | train/reward|0.2450762391090393 | step|27384
+2025-10-26 18:27:08,352|INFO|day: 488, episode: 60
+2025-10-26 18:27:08,352|INFO|begin_total_asset: 55663600.00
+2025-10-26 18:27:08,353|INFO|end_total_asset: 1488355134.42
+2025-10-26 18:27:08,353|INFO|total_reward: 1432691534.42
+2025-10-26 18:27:08,353|INFO|total_cost: 28287370.59
+2025-10-26 18:27:08,353|INFO|total_trades: 7077
+2025-10-26 18:27:08,353|INFO|Sharpe: 3.099
+2025-10-26 18:27:08,354|INFO|=================================
+2025-10-26 18:27:12,518|INFO|time/episodes|60 | time/fps|107 | time/time_elapsed|272 | time/total_timesteps|29340 | train/actor_loss|-1.4752399921417236 | train/critic_loss|0.0028299065306782722 | train/learning_rate|0.001 | train/n_updates|29239 | train/reward|0.2514137327671051 | step|29340
+2025-10-26 18:27:28,906|INFO|time/episodes|64 | time/fps|108 | time/time_elapsed|288 | time/total_timesteps|31296 | train/actor_loss|-1.5289514064788818 | train/critic_loss|0.002054941840469837 | train/learning_rate|0.001 | train/n_updates|31195 | train/reward|0.3195670247077942 | step|31296
+2025-10-26 18:27:48,597|INFO|time/episodes|68 | time/fps|107 | time/time_elapsed|308 | time/total_timesteps|33252 | train/actor_loss|-1.6792856454849243 | train/critic_loss|0.007037995848804712 | train/learning_rate|0.001 | train/n_updates|33151 | train/reward|0.262933611869812 | step|33252
+2025-10-26 18:27:52,790|INFO|day: 488, episode: 70
+2025-10-26 18:27:52,791|INFO|begin_total_asset: 60482600.00
+2025-10-26 18:27:52,791|INFO|end_total_asset: 1606905723.57
+2025-10-26 18:27:52,791|INFO|total_reward: 1546423123.57
+2025-10-26 18:27:52,791|INFO|total_cost: 25260261.43
+2025-10-26 18:27:52,792|INFO|total_trades: 7285
+2025-10-26 18:27:52,792|INFO|Sharpe: 3.169
+2025-10-26 18:27:52,792|INFO|=================================
+2025-10-26 18:28:08,644|INFO|time/episodes|72 | time/fps|107 | time/time_elapsed|328 | time/total_timesteps|35208 | train/actor_loss|-1.6826649904251099 | train/critic_loss|0.0018154338467866182 | train/learning_rate|0.001 | train/n_updates|35107 | train/reward|0.3747590482234955 | step|35208
+2025-10-26 18:28:25,157|INFO|time/episodes|76 | time/fps|107 | time/time_elapsed|345 | time/total_timesteps|37164 | train/actor_loss|-1.723116159439087 | train/critic_loss|0.0047837127931416035 | train/learning_rate|0.001 | train/n_updates|37063 | train/reward|0.5992216467857361 | step|37164
+2025-10-26 18:28:37,503|INFO|day: 488, episode: 80
+2025-10-26 18:28:37,504|INFO|begin_total_asset: 79324550.00
+2025-10-26 18:28:37,504|INFO|end_total_asset: 2123593950.52
+2025-10-26 18:28:37,504|INFO|total_reward: 2044269400.52
+2025-10-26 18:28:37,504|INFO|total_cost: 27694109.48
+2025-10-26 18:28:37,505|INFO|total_trades: 7165
+2025-10-26 18:28:37,505|INFO|Sharpe: 3.578
+2025-10-26 18:28:37,505|INFO|=================================
+2025-10-26 18:28:45,043|INFO|time/episodes|80 | time/fps|107 | time/time_elapsed|365 | time/total_timesteps|39120 | train/actor_loss|-1.9072237014770508 | train/critic_loss|0.007454044185578823 | train/learning_rate|0.001 | train/n_updates|39019 | train/reward|0.38302868604660034 | step|39120
+2025-10-26 18:29:01,917|INFO|time/episodes|84 | time/fps|107 | time/time_elapsed|381 | time/total_timesteps|41076 | train/actor_loss|-1.9718334674835205 | train/critic_loss|0.003788930829614401 | train/learning_rate|0.001 | train/n_updates|40975 | train/reward|0.38200846314430237 | step|41076
+2025-10-26 18:29:22,049|INFO|time/episodes|88 | time/fps|107 | time/time_elapsed|402 | time/total_timesteps|43032 | train/actor_loss|-2.0082879066467285 | train/critic_loss|0.002028663409873843 | train/learning_rate|0.001 | train/n_updates|42931 | train/reward|0.44559818506240845 | step|43032
+2025-10-26 18:29:26,135|INFO|day: 488, episode: 90
+2025-10-26 18:29:26,136|INFO|begin_total_asset: 76608700.00
+2025-10-26 18:29:26,136|INFO|end_total_asset: 2569755007.40
+2025-10-26 18:29:26,136|INFO|total_reward: 2493146307.40
+2025-10-26 18:29:26,136|INFO|total_cost: 28211422.60
+2025-10-26 18:29:26,137|INFO|total_trades: 6494
+2025-10-26 18:29:26,137|INFO|Sharpe: 3.160
+2025-10-26 18:29:26,137|INFO|=================================
+2025-10-26 18:29:38,318|INFO|time/episodes|92 | time/fps|107 | time/time_elapsed|418 | time/total_timesteps|44988 | train/actor_loss|-2.2461681365966797 | train/critic_loss|0.0019639385864138603 | train/learning_rate|0.001 | train/n_updates|44887 | train/reward|0.42483076453208923 | step|44988
+2025-10-26 18:29:58,243|INFO|time/episodes|96 | time/fps|107 | time/time_elapsed|438 | time/total_timesteps|46944 | train/actor_loss|-2.1717185974121094 | train/critic_loss|0.0019731123466044664 | train/learning_rate|0.001 | train/n_updates|46843 | train/reward|0.4167620837688446 | step|46944
+2025-10-26 18:30:10,590|INFO|day: 488, episode: 100
+2025-10-26 18:30:10,591|INFO|begin_total_asset: 83911400.00
+2025-10-26 18:30:10,591|INFO|end_total_asset: 2523339453.95
+2025-10-26 18:30:10,591|INFO|total_reward: 2439428053.95
+2025-10-26 18:30:10,591|INFO|total_cost: 24298151.06
+2025-10-26 18:30:10,591|INFO|total_trades: 6611
+2025-10-26 18:30:10,591|INFO|Sharpe: 3.301
+2025-10-26 18:30:10,592|INFO|=================================
+2025-10-26 18:30:14,626|INFO|time/episodes|100 | time/fps|107 | time/time_elapsed|454 | time/total_timesteps|48900 | train/actor_loss|-2.200589418411255 | train/critic_loss|0.0013847299851477146 | train/learning_rate|0.001 | train/n_updates|48799 | train/reward|0.4172664284706116 | step|48900
+2025-10-26 18:30:34,488|INFO|time/episodes|104 | time/fps|107 | time/time_elapsed|474 | time/total_timesteps|50856 | train/actor_loss|-2.34086275100708 | train/critic_loss|0.0025597894564270973 | train/learning_rate|0.001 | train/n_updates|50755 | train/reward|0.2668992578983307 | step|50856
+2025-10-26 18:30:50,743|INFO|time/episodes|108 | time/fps|107 | time/time_elapsed|490 | time/total_timesteps|52812 | train/actor_loss|-2.386356830596924 | train/critic_loss|0.002676768694072962 | train/learning_rate|0.001 | train/n_updates|52711 | train/reward|0.4078187942504883 | step|52812
+2025-10-26 18:30:54,773|INFO|day: 488, episode: 110
+2025-10-26 18:30:54,773|INFO|begin_total_asset: 97092100.00
+2025-10-26 18:30:54,774|INFO|end_total_asset: 3930457019.92
+2025-10-26 18:30:54,774|INFO|total_reward: 3833364919.92
+2025-10-26 18:30:54,774|INFO|total_cost: 24960780.08
+2025-10-26 18:30:54,774|INFO|total_trades: 5613
+2025-10-26 18:30:54,775|INFO|Sharpe: 3.098
+2025-10-26 18:30:54,775|INFO|=================================
+2025-10-26 18:31:10,550|INFO|time/episodes|112 | time/fps|107 | time/time_elapsed|510 | time/total_timesteps|54768 | train/actor_loss|-2.3443784713745117 | train/critic_loss|0.0015441866125911474 | train/learning_rate|0.001 | train/n_updates|54667 | train/reward|0.49962687492370605 | step|54768
+2025-10-26 18:31:26,946|INFO|time/episodes|116 | time/fps|107 | time/time_elapsed|526 | time/total_timesteps|56724 | train/actor_loss|-2.5719668865203857 | train/critic_loss|0.0018833150388672948 | train/learning_rate|0.001 | train/n_updates|56623 | train/reward|0.3056226968765259 | step|56724
+2025-10-26 18:31:42,921|INFO|day: 488, episode: 120
+2025-10-26 18:31:42,922|INFO|begin_total_asset: 86403000.00
+2025-10-26 18:31:42,922|INFO|end_total_asset: 3469274242.82
+2025-10-26 18:31:42,922|INFO|total_reward: 3382871242.82
+2025-10-26 18:31:42,922|INFO|total_cost: 41198162.18
+2025-10-26 18:31:42,923|INFO|total_trades: 6704
+2025-10-26 18:31:42,923|INFO|Sharpe: 3.520
+2025-10-26 18:31:42,923|INFO|=================================
+2025-10-26 18:31:47,177|INFO|time/episodes|120 | time/fps|107 | time/time_elapsed|547 | time/total_timesteps|58680 | train/actor_loss|-2.517409324645996 | train/critic_loss|0.0021818429231643677 | train/learning_rate|0.001 | train/n_updates|58579 | train/reward|0.5906873345375061 | step|58680
+2025-10-26 18:32:04,055|INFO|time/episodes|124 | time/fps|107 | time/time_elapsed|564 | time/total_timesteps|60636 | train/actor_loss|-2.596325635910034 | train/critic_loss|0.0013014745200052857 | train/learning_rate|0.001 | train/n_updates|60535 | train/reward|0.42169585824012756 | step|60636
+2025-10-26 18:32:23,854|INFO|time/episodes|128 | time/fps|107 | time/time_elapsed|583 | time/total_timesteps|62592 | train/actor_loss|-2.6483230590820312 | train/critic_loss|0.0014589423080906272 | train/learning_rate|0.001 | train/n_updates|62491 | train/reward|0.6054852604866028 | step|62592
+2025-10-26 18:32:27,979|INFO|day: 488, episode: 130
+2025-10-26 18:32:27,979|INFO|begin_total_asset: 69339000.00
+2025-10-26 18:32:27,980|INFO|end_total_asset: 4686368376.41
+2025-10-26 18:32:27,980|INFO|total_reward: 4617029376.41
+2025-10-26 18:32:27,980|INFO|total_cost: 32281913.59
+2025-10-26 18:32:27,980|INFO|total_trades: 6005
+2025-10-26 18:32:27,980|INFO|Sharpe: 3.687
+2025-10-26 18:32:27,980|INFO|=================================
+2025-10-26 18:32:40,257|INFO|time/episodes|132 | time/fps|107 | time/time_elapsed|600 | time/total_timesteps|64548 | train/actor_loss|-2.7307629585266113 | train/critic_loss|0.0014409798895940185 | train/learning_rate|0.001 | train/n_updates|64447 | train/reward|0.7068068981170654 | step|64548
+2025-10-26 18:32:59,983|INFO|time/episodes|136 | time/fps|107 | time/time_elapsed|619 | time/total_timesteps|66504 | train/actor_loss|-2.689920425415039 | train/critic_loss|0.0009705436532385647 | train/learning_rate|0.001 | train/n_updates|66403 | train/reward|0.3679594397544861 | step|66504
+2025-10-26 18:33:12,523|INFO|day: 488, episode: 140
+2025-10-26 18:33:12,523|INFO|begin_total_asset: 73627600.00
+2025-10-26 18:33:12,523|INFO|end_total_asset: 4399394916.61
+2025-10-26 18:33:12,523|INFO|total_reward: 4325767316.61
+2025-10-26 18:33:12,524|INFO|total_cost: 39064018.40
+2025-10-26 18:33:12,524|INFO|total_trades: 6115
+2025-10-26 18:33:12,524|INFO|Sharpe: 3.571
+2025-10-26 18:33:12,524|INFO|=================================
+2025-10-26 18:33:16,556|INFO|time/episodes|140 | time/fps|107 | time/time_elapsed|636 | time/total_timesteps|68460 | train/actor_loss|-2.7455973625183105 | train/critic_loss|0.0019031754927709699 | train/learning_rate|0.001 | train/n_updates|68359 | train/reward|0.38414692878723145 | step|68460
+2025-10-26 18:33:36,415|INFO|time/episodes|144 | time/fps|107 | time/time_elapsed|656 | time/total_timesteps|70416 | train/actor_loss|-2.8798036575317383 | train/critic_loss|0.0023861974477767944 | train/learning_rate|0.001 | train/n_updates|70315 | train/reward|0.6791749000549316 | step|70416
+2025-10-26 18:33:52,851|INFO|time/episodes|148 | time/fps|107 | time/time_elapsed|672 | time/total_timesteps|72372 | train/actor_loss|-2.8598623275756836 | train/critic_loss|0.0014624935574829578 | train/learning_rate|0.001 | train/n_updates|72271 | train/reward|0.30229872465133667 | step|72372
+2025-10-26 18:33:56,966|INFO|day: 488, episode: 150
+2025-10-26 18:33:56,967|INFO|begin_total_asset: 74990690.00
+2025-10-26 18:33:56,967|INFO|end_total_asset: 4609498004.88
+2025-10-26 18:33:56,967|INFO|total_reward: 4534507314.88
+2025-10-26 18:33:56,967|INFO|total_cost: 44114735.12
+2025-10-26 18:33:56,967|INFO|total_trades: 6266
+2025-10-26 18:33:56,968|INFO|Sharpe: 3.915
+2025-10-26 18:33:56,968|INFO|=================================
+2025-10-26 18:34:12,674|INFO|time/episodes|152 | time/fps|107 | time/time_elapsed|692 | time/total_timesteps|74328 | train/actor_loss|-3.0569310188293457 | train/critic_loss|0.0011576606193557382 | train/learning_rate|0.001 | train/n_updates|74227 | train/reward|0.353904128074646 | step|74328
+2025-10-26 18:34:28,931|INFO|time/episodes|156 | time/fps|107 | time/time_elapsed|708 | time/total_timesteps|76284 | train/actor_loss|-3.0363454818725586 | train/critic_loss|0.001139865955337882 | train/learning_rate|0.001 | train/n_updates|76183 | train/reward|0.3583016097545624 | step|76284
+2025-10-26 18:34:44,592|INFO|day: 488, episode: 160
+2025-10-26 18:34:44,592|INFO|begin_total_asset: 62517000.00
+2025-10-26 18:34:44,592|INFO|end_total_asset: 5151193625.90
+2025-10-26 18:34:44,593|INFO|total_reward: 5088676625.90
+2025-10-26 18:34:44,593|INFO|total_cost: 44686799.11
+2025-10-26 18:34:44,593|INFO|total_trades: 5791
+2025-10-26 18:34:44,593|INFO|Sharpe: 3.980
+2025-10-26 18:34:44,593|INFO|=================================
+2025-10-26 18:34:48,690|INFO|time/episodes|160 | time/fps|107 | time/time_elapsed|728 | time/total_timesteps|78240 | train/actor_loss|-2.8932175636291504 | train/critic_loss|0.0016310755163431168 | train/learning_rate|0.001 | train/n_updates|78139 | train/reward|0.42968180775642395 | step|78240
+2025-10-26 18:35:05,119|INFO|time/episodes|164 | time/fps|107 | time/time_elapsed|745 | time/total_timesteps|80196 | train/actor_loss|-3.045637369155884 | train/critic_loss|0.0010324765462428331 | train/learning_rate|0.001 | train/n_updates|80095 | train/reward|0.6197431683540344 | step|80196
+2025-10-26 18:35:24,993|INFO|time/episodes|168 | time/fps|107 | time/time_elapsed|764 | time/total_timesteps|82152 | train/actor_loss|-2.9608728885650635 | train/critic_loss|0.000780670263338834 | train/learning_rate|0.001 | train/n_updates|82051 | train/reward|0.42211899161338806 | step|82152
+2025-10-26 18:35:29,086|INFO|day: 488, episode: 170
+2025-10-26 18:35:29,086|INFO|begin_total_asset: 79433250.00
+2025-10-26 18:35:29,087|INFO|end_total_asset: 5911180903.74
+2025-10-26 18:35:29,087|INFO|total_reward: 5831747653.74
+2025-10-26 18:35:29,087|INFO|total_cost: 43759056.26
+2025-10-26 18:35:29,087|INFO|total_trades: 6004
+2025-10-26 18:35:29,088|INFO|Sharpe: 3.897
+2025-10-26 18:35:29,088|INFO|=================================
+2025-10-26 18:35:41,403|INFO|time/episodes|172 | time/fps|107 | time/time_elapsed|781 | time/total_timesteps|84108 | train/actor_loss|-2.9952588081359863 | train/critic_loss|0.000939735327847302 | train/learning_rate|0.001 | train/n_updates|84007 | train/reward|0.44430699944496155 | step|84108
+2025-10-26 18:36:01,146|INFO|time/episodes|176 | time/fps|107 | time/time_elapsed|801 | time/total_timesteps|86064 | train/actor_loss|-3.083062171936035 | train/critic_loss|0.0011081462725996971 | train/learning_rate|0.001 | train/n_updates|85963 | train/reward|0.32388004660606384 | step|86064
+2025-10-26 18:36:13,469|INFO|day: 488, episode: 180
+2025-10-26 18:36:13,469|INFO|begin_total_asset: 68710080.00
+2025-10-26 18:36:13,470|INFO|end_total_asset: 5781182080.52
+2025-10-26 18:36:13,470|INFO|total_reward: 5712472000.52
+2025-10-26 18:36:13,470|INFO|total_cost: 44063714.48
+2025-10-26 18:36:13,470|INFO|total_trades: 6034
+2025-10-26 18:36:13,470|INFO|Sharpe: 4.062
+2025-10-26 18:36:13,471|INFO|=================================
+2025-10-26 18:36:17,555|INFO|time/episodes|180 | time/fps|107 | time/time_elapsed|817 | time/total_timesteps|88020 | train/actor_loss|-3.0514769554138184 | train/critic_loss|0.0005566860781982541 | train/learning_rate|0.001 | train/n_updates|87919 | train/reward|0.43235424160957336 | step|88020
+2025-10-26 18:36:37,436|INFO|time/episodes|184 | time/fps|107 | time/time_elapsed|837 | time/total_timesteps|89976 | train/actor_loss|-3.014514207839966 | train/critic_loss|0.0006540669710375369 | train/learning_rate|0.001 | train/n_updates|89875 | train/reward|0.3693965971469879 | step|89976
+2025-10-26 18:36:55,202|INFO|time/episodes|188 | time/fps|107 | time/time_elapsed|855 | time/total_timesteps|91932 | train/actor_loss|-2.9450292587280273 | train/critic_loss|0.0005168057978153229 | train/learning_rate|0.001 | train/n_updates|91831 | train/reward|0.4167112112045288 | step|91932
+2025-10-26 18:37:02,958|INFO|day: 488, episode: 190
+2025-10-26 18:37:02,958|INFO|begin_total_asset: 97413050.00
+2025-10-26 18:37:02,958|INFO|end_total_asset: 6366270405.17
+2025-10-26 18:37:02,958|INFO|total_reward: 6268857355.17
+2025-10-26 18:37:02,959|INFO|total_cost: 43992379.83
+2025-10-26 18:37:02,959|INFO|total_trades: 5903
+2025-10-26 18:37:02,959|INFO|Sharpe: 3.837
+2025-10-26 18:37:02,959|INFO|=================================
+2025-10-26 18:37:16,243|INFO|time/episodes|192 | time/fps|107 | time/time_elapsed|876 | time/total_timesteps|93888 | train/actor_loss|-3.14764142036438 | train/critic_loss|0.000643690989818424 | train/learning_rate|0.001 | train/n_updates|93787 | train/reward|0.3722544312477112 | step|93888
+2025-10-26 18:37:37,112|INFO|time/episodes|196 | time/fps|106 | time/time_elapsed|897 | time/total_timesteps|95844 | train/actor_loss|-3.1308774948120117 | train/critic_loss|0.00041138852247968316 | train/learning_rate|0.001 | train/n_updates|95743 | train/reward|0.45684489607810974 | step|95844
+2025-10-26 18:37:50,568|INFO|day: 488, episode: 200
+2025-10-26 18:37:50,568|INFO|begin_total_asset: 77905550.00
+2025-10-26 18:37:50,568|INFO|end_total_asset: 6439998586.15
+2025-10-26 18:37:50,568|INFO|total_reward: 6362093036.15
+2025-10-26 18:37:50,569|INFO|total_cost: 42085203.85
+2025-10-26 18:37:50,569|INFO|total_trades: 5646
+2025-10-26 18:37:50,569|INFO|Sharpe: 3.849
+2025-10-26 18:37:50,569|INFO|=================================
+2025-10-26 18:37:54,977|INFO|time/episodes|200 | time/fps|106 | time/time_elapsed|914 | time/total_timesteps|97800 | train/actor_loss|-3.1460328102111816 | train/critic_loss|0.0005509871407411993 | train/learning_rate|0.001 | train/n_updates|97699 | train/reward|0.4090123772621155 | step|97800
+2025-10-26 18:38:14,662|INFO|time/episodes|204 | time/fps|106 | time/time_elapsed|934 | time/total_timesteps|99756 | train/actor_loss|-2.9595041275024414 | train/critic_loss|0.0006619133637286723 | train/learning_rate|0.001 | train/n_updates|99655 | train/reward|0.521669328212738 | step|99756
+2025-10-26 18:38:16,766|INFO|saved_model|experiments/overnight_ddpg/models/agent_ddpg.zip
+2025-10-26 18:38:16,890|INFO|hit end!
+2025-10-26 18:38:16,898|INFO|saved_metric|test_account_value|path|experiments/overnight_ddpg/results/test_account_value.csv
+2025-10-26 18:38:17,197|INFO|hit end!
+2025-10-26 18:38:17,205|INFO|saved_metric|trade_account_value|path|experiments/overnight_ddpg/results/trade_account_value.csv
+2025-10-26 18:38:17,346|INFO|experiment_root|experiments/overnight_ddpg
