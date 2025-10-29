@@ -6,8 +6,9 @@ from typing import Dict
 
 @dataclass(frozen=True)
 class EnvHyperParams:
-    hmax: int = 100
-    transaction_cost_pct: float = 0.001
+    hmax: int = 20
+    buy_cost_pct: float = 0.004
+    sell_cost_pct: float = 0.001
     reward_scaling: float = 1e-4
 
 
@@ -45,7 +46,7 @@ DEFAULT_ALGO_CONFIG: Dict[str, dict] = {
         },
     },
     "ppo": {
-        "timesteps": 200_000,
+        "timesteps": 1_000_000,
         "model_kwargs": {
             "n_steps": 2048,
             "ent_coef": 0.01,

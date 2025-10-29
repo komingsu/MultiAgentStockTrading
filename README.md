@@ -67,12 +67,14 @@ python scripts/infer_action.py \
 - `scripts/`
   - `run_train_agent.py` : 학습/평가 CLI
   - `infer_action.py` : 보유 상태 → 액션 추론 CLI
+  - `plot_training_results.py` : SB3 모니터 로그 기반 학습 곡선 PNG 생성
 - `vis_util.py` : 자산 곡선 시각화
 - `data/` : 전처리된 CSV
 - `experiments/` : 실험 산출물
 
 ## 로그 및 산출물
-- 학습/평가지표는 `logs/experiment.log`에 `metric|value|step` 형식으로 누적 (SB3 `progress.csv` 없음)
+- 학습/평가지표는 `logs/experiment.log`에 `metric|value|step` 형식으로 누적
+- SB3 모니터 & 로거: `logs/sb3/train_monitor/monitor.csv`, `logs/sb3/eval/`(평가 콜백), `logs/sb3/progress.csv`, TensorBoard 이벤트(`logs/sb3/events.*`, `tensorboard` 설치 시)
 - Test/Trade 평가 결과는 `results/` CSV + `plots/` PNG
 
 ## 기타 스크립트

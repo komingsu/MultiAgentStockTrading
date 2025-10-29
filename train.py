@@ -10,7 +10,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-from stable_baselines3.common.logger import KVWriter, Logger
+from stable_baselines3.common.logger import KVWriter, configure
+from stable_baselines3.common.callbacks import CallbackList, EvalCallback
 
 import config
 from env import StockTradingEnv
@@ -118,13 +119,14 @@ def build_env_kwargs(
     initial_amount: float | None = None,
 ) -> dict:
     amount = initial_amount if initial_amount is not None else PORTFOLIO_INIT.initial_cash
-    cost = env_params.transaction_cost_pct
+    buy_cost = env_params.buy_cost_pct
+    sell_cost = env_params.sell_cost_pct
     return {
         "hmax": env_params.hmax,
         "initial_amount": amount,
         "num_stock_shares": [0] * stock_dim,
-        "buy_cost_pct": [cost] * stock_dim,
-        "sell_cost_pct": [cost] * stock_dim,
+        "buy_cost_pct": [buy_cost] * stock_dim,
+        "sell_cost_pct": [sell_cost] * stock_dim,
         "state_space": state_space,
         "stock_dim": stock_dim,
         "tech_indicator_list": config.INDICATORS,
@@ -140,6 +142,10 @@ def train_agent(
     algo_cfg: dict,
     total_timesteps: int,
     logger: logging.Logger,
+    log_dir: Path,
+    eval_env=None,
+    eval_freq: int | None = None,
+    n_eval_episodes: int = 5,
 ) -> object:
     logger.info("train_algo|%s|timesteps|%s", algo.upper(), total_timesteps)
     agent = DRLAgent(env_train)
@@ -149,13 +155,40 @@ def train_agent(
         tensorboard_log=None,
     )
 
-    sb3_logger = Logger(folder=None, output_formats=[LoggingOutputFormat(logger)])
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    format_strings = ["stdout", "csv"]
+    try:  # pragma: no cover - optional tensorboard dependency
+        import tensorboard  # type: ignore  # noqa: F401
+    except ImportError:
+        logger.info("tensorboard is not installed; skipping tensorboard logging output")
+    else:
+        format_strings.append("tensorboard")
+    sb3_logger = configure(str(log_dir), format_strings)
+    sb3_logger.output_formats.append(LoggingOutputFormat(logger))
     model.set_logger(sb3_logger)
+
+    callbacks = []
+    if eval_env is not None and eval_freq:
+        eval_log_dir = log_dir / "eval"
+        eval_log_dir.mkdir(parents=True, exist_ok=True)
+        eval_callback = EvalCallback(
+            eval_env,
+            best_model_save_path=str(eval_log_dir),
+            log_path=str(eval_log_dir),
+            eval_freq=eval_freq,
+            n_eval_episodes=n_eval_episodes,
+            deterministic=True,
+        )
+        callbacks.append(eval_callback)
+
+    callback_list = CallbackList(callbacks) if callbacks else None
 
     trained_model = agent.train_model(
         model=model,
         tb_log_name=algo,
         total_timesteps=total_timesteps,
+        callback=callback_list,
     )
     return trained_model
 
@@ -170,7 +203,7 @@ def evaluate_agent(
     logger: logging.Logger,
     label: str,
     turbulence_threshold: float | None = None,
-    risk_indicator_col: str = "vix",
+    risk_indicator_col: str = config.RISK_INDICATOR_COL,
 ) -> pd.DataFrame:
     results_dir.mkdir(parents=True, exist_ok=True)
     plots_dir.mkdir(parents=True, exist_ok=True)

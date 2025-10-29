@@ -11,7 +11,7 @@ from stable_baselines3 import PPO
 from stable_baselines3 import SAC
 from stable_baselines3 import TD3
 
-from stable_baselines3.common.callbacks import BaseCallback  # Callbacks for training
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList  # Callbacks for training
 from stable_baselines3.common.noise import NormalActionNoise  # Noise for continuous action spaces
 from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise  # Ornstein-Uhlenbeck noise for continuous action spaces
 
@@ -120,13 +120,22 @@ class DRLAgent:
 
     @staticmethod
     def train_model(
-        model, tb_log_name, total_timesteps=5000
+        model, tb_log_name, total_timesteps=5000, callback=None
     ):
         "이전에 get_model에서 설정한 모델을 훈련 데이터셋에서 훈련"
+        base_callback = TensorboardCallback()
+        if callback is None:
+            combined_callback = base_callback
+        else:
+            if isinstance(callback, CallbackList):
+                callbacks = [base_callback] + callback.callbacks
+            else:
+                callbacks = [base_callback, callback]
+            combined_callback = CallbackList(callbacks)
         model = model.learn(
             total_timesteps=total_timesteps,
             tb_log_name=tb_log_name,
-            callback=TensorboardCallback(),
+            callback=combined_callback,
         )
         return model
 

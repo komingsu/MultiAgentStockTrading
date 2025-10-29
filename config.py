@@ -29,6 +29,8 @@ INDICATORS = [
     "sma_30",
 ]
 
+RISK_INDICATOR_COL = "turbulence"
+
 # Possible time zones
 TIME_ZONE_SHANGHAI = "Asia/Shanghai"  # Hang Seng HSI, SSE, CSI
 TIME_ZONE_USEASTERN = "US/Eastern"  # Dow, Nasdaq, SP

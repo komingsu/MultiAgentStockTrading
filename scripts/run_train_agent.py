@@ -76,13 +76,45 @@ def main(argv: Iterable[str] | None = None) -> int:
     state_space = 1 + 2 * stock_dim + len(config.INDICATORS) * stock_dim
     env_kwargs = build_env_kwargs(stock_dim=stock_dim, state_space=state_space, env_params=ENV_PARAMS, initial_amount=PORTFOLIO_INIT.initial_cash)
 
+    sb3_log_dir = paths.logs / "sb3"
+    train_monitor_dir = sb3_log_dir / "train_monitor"
+
     env_train = StockTradingEnv(
         df=train_df,
         random_start=True,
         portfolio_config=PORTFOLIO_INIT,
         **env_kwargs,
     )
-    sb_env, _ = env_train.get_sb_env()
+    sb_env, _ = env_train.get_sb_env(log_dir=train_monitor_dir)
+
+    eval_df = load_dataset("stock_test_data.csv")
+    eval_env_kwargs = build_env_kwargs(
+        stock_dim=stock_dim,
+        state_space=state_space,
+        env_params=ENV_PARAMS,
+        initial_amount=PORTFOLIO_INIT.initial_cash,
+    )
+    eval_env = StockTradingEnv(
+        df=eval_df,
+        random_start=False,
+        **eval_env_kwargs,
+    )
+    eval_monitor_dir = sb3_log_dir / "eval_monitor"
+    eval_vec_env, _ = eval_env.get_sb_env(log_dir=eval_monitor_dir)
+    if hasattr(eval_vec_env, "training"):
+        eval_vec_env.training = False
+    if hasattr(eval_vec_env, "norm_reward"):
+        eval_vec_env.norm_reward = False
+    if hasattr(sb_env, "obs_rms") and hasattr(eval_vec_env, "obs_rms"):
+        eval_vec_env.obs_rms = sb_env.obs_rms
+    if hasattr(sb_env, "ret_rms") and hasattr(eval_vec_env, "ret_rms"):
+        eval_vec_env.ret_rms = sb_env.ret_rms
+    if hasattr(sb_env, "clip_obs") and hasattr(eval_vec_env, "clip_obs"):
+        eval_vec_env.clip_obs = sb_env.clip_obs
+    if hasattr(sb_env, "clip_reward") and hasattr(eval_vec_env, "clip_reward"):
+        eval_vec_env.clip_reward = sb_env.clip_reward
+
+    eval_freq = max(1, total_timesteps // 10)
 
     trained_model = train_agent(
         sb_env,
@@ -90,6 +122,9 @@ def main(argv: Iterable[str] | None = None) -> int:
         algo_cfg=algo_cfg,
         total_timesteps=total_timesteps,
         logger=logger,
+        log_dir=sb3_log_dir,
+        eval_env=eval_vec_env,
+        eval_freq=eval_freq,
     )
 
     save_path = paths.models / f"agent_{algo_key}.zip"

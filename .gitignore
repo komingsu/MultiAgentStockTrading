@@ -8,3 +8,6 @@ ghp_*
 __pycache__/
 */__pycache__/
 WORKLOG/
+*.egg-info/
+experiments/*
+!experiments/.gitkeep

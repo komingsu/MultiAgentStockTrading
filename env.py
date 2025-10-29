@@ -15,7 +15,7 @@ import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.utils import seeding
 
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, VecMonitor
 
 matplotlib.use("Agg")
 
@@ -90,7 +90,7 @@ class StockTradingEnv(gym.Env):
         action_space: int,
         tech_indicator_list: list[str],
         turbulence_threshold=None,
-        risk_indicator_col="turbulence",
+        risk_indicator_col=config.RISK_INDICATOR_COL,
         make_plots: bool = False,
         print_verbosity=10,
         day=0,
@@ -872,8 +872,12 @@ class StockTradingEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def get_sb_env(self):
+    def get_sb_env(self, log_dir=None):
         e = DummyVecEnv([lambda: self])
-        obs = e.reset()
+        if log_dir is not None:
+            log_path = Path(log_dir)
+            log_path.mkdir(parents=True, exist_ok=True)
+            e = VecMonitor(e, str(log_path))
         e = VecNormalize(e, norm_obs=True, norm_reward=True, clip_obs=10.0)
+        obs = e.reset()
         return e, obs

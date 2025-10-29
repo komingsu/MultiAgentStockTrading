@@ -148,8 +148,8 @@ def main() -> None:
         help="CSV with trade data (default: data/trade_data.csv)",
     )
     parser.add_argument("--hmax", type=int, default=ENV_PARAMS.hmax, help="Max shares per order (same as training)")
-    parser.add_argument("--buy-cost", type=float, default=ENV_PARAMS.transaction_cost_pct, help="Buy transaction cost percentage")
-    parser.add_argument("--sell-cost", type=float, default=ENV_PARAMS.transaction_cost_pct, help="Sell transaction cost percentage")
+    parser.add_argument("--buy-cost", type=float, default=ENV_PARAMS.buy_cost_pct, help="Buy transaction cost percentage")
+    parser.add_argument("--sell-cost", type=float, default=ENV_PARAMS.sell_cost_pct, help="Sell transaction cost percentage")
     parser.add_argument(
         "--turbulence-threshold",
         type=float,
