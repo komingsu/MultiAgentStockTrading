@@ -29,41 +29,7 @@ INDICATORS = [
     "sma_30",
 ]
 
-# Model Parameters
-A2C_PARAMS = {"n_steps": 5, "ent_coef": 0.01, "learning_rate": 0.0007}
-PPO_PARAMS = {
-    "n_steps": 2048,
-    "ent_coef": 0.01,
-    "learning_rate": 0.00025,
-    "batch_size": 64,
-}
-
-DDPG_PARAMS = {"batch_size": 128, "buffer_size": 50000, "learning_rate": 0.001,
-               "tau": 0.001, "gamma": 0.99}
-
-TD3_PARAMS = {"batch_size": 100, "buffer_size": 1000000, "learning_rate": 0.001}
-SAC_PARAMS = {
-    "batch_size": 64,
-    "buffer_size": 100000,
-    "learning_rate": 0.0001,
-    "learning_starts": 100,
-    "ent_coef": "auto_0.1",
-}
-ERL_PARAMS = {
-    "learning_rate": 3e-5,
-    "batch_size": 2048,
-    "gamma": 0.985,
-    "seed": 312,
-    "net_dimension": 512,
-    "target_step": 5000,
-    "eval_gap": 30,
-    "eval_times": 64,  # bug fix:KeyError: 'eval_times' line 68, in get_model model.eval_times = model_kwargs["eval_times"]
-}
-
-RLlib_PARAMS = {"lr": 5e-5, "train_batch_size": 500, "gamma": 0.99}
-
-REBALANCE_WINDOW = 63 # rebalance_window is the number of days to retrain the model
-VALIDATION_WINDOW = 63 # validation_window is the number of days to do validation and trading (e.g. if validation_window=63, then both validation and trading period will be 63 days)
+RISK_INDICATOR_COL = "turbulence"
 
 # Possible time zones
 TIME_ZONE_SHANGHAI = "Asia/Shanghai"  # Hang Seng HSI, SSE, CSI

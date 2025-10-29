@@ -15,11 +15,12 @@ import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.utils import seeding
 
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, VecMonitor
 
 matplotlib.use("Agg")
 
 import config
+from hyperparams import PortfolioInitParams
 
 
 LOGGER = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ class StockTradingEnv(gym.Env):
         action_space: int,
         tech_indicator_list: list[str],
         turbulence_threshold=None,
-        risk_indicator_col="turbulence",
+        risk_indicator_col=config.RISK_INDICATOR_COL,
         make_plots: bool = False,
         print_verbosity=10,
         day=0,
@@ -98,13 +99,17 @@ class StockTradingEnv(gym.Env):
         model_name="",
         mode="",
         iteration="",
+        random_start: bool = False,
+        portfolio_config: PortfolioInitParams | None = None,
     ):
         self.day = day
         self.df = df
         self.stock_dim = stock_dim
         self.hmax = hmax
-        self.num_stock_shares = num_stock_shares
-        self.initial_amount = initial_amount  # get the initial cash
+        self.base_num_stock_shares = list(num_stock_shares)
+        self.num_stock_shares = list(num_stock_shares)
+        self.base_initial_amount = initial_amount
+        self.initial_amount = initial_amount  # refreshed each episode
         self.buy_cost_pct = buy_cost_pct
         self.sell_cost_pct = sell_cost_pct
         self.reward_scaling = reward_scaling
@@ -126,7 +131,10 @@ class StockTradingEnv(gym.Env):
         self.model_name = model_name
         self.mode = mode
         self.iteration = iteration
+        self.portfolio_config = portfolio_config
+        self.random_start = bool(random_start and portfolio_config is not None)
         # initalize state
+        self._seed()
         self.state = self._initiate_state()
 
         # initialize reward
@@ -151,7 +159,6 @@ class StockTradingEnv(gym.Env):
         self.date_memory = [self._get_date()]
         #         self.logger = Logger('results',[CSVOutputFormat])
         # self.reset()
-        self._seed()
 
     def _sell_stock(self, index, action):
         """
@@ -478,8 +485,7 @@ class StockTradingEnv(gym.Env):
                 actions[index] = self._buy_stock(index, actions[index])
                 
             # 수행된 액션들을 기록합니다.
-            self.actions_memory.append(actions)
-            self.actions_memory.append(actions)
+            self.actions_memory.append(actions.astype(int).tolist())
 
             # state: s -> s+1, 다음 거래일로 넘어갑니다.
             self.day += 1
@@ -541,6 +547,8 @@ class StockTradingEnv(gym.Env):
         self.day = 0
         # 현재 날짜에 해당하는 데이터를 데이터프레임에서 가져옵니다.
         self.data = self.df.loc[self.day, :]
+        self.initial_amount = self.base_initial_amount
+        self.num_stock_shares = list(self.base_num_stock_shares)
         # 상태를 초기 상태로 설정하는 내부 메서드를 호출합니다.
         self.state = self._initiate_state()
 
@@ -598,6 +606,14 @@ class StockTradingEnv(gym.Env):
         이 메서드는 reset 메서드에 의해 호출되며, 에이전트의 초기 상태 또는 이전 상태를 준비합니다.
         """
 
+        if self.initial:
+            self.initial_amount = self.base_initial_amount
+            self.num_stock_shares = list(self.base_num_stock_shares)
+            if self.random_start and self.portfolio_config is not None:
+                cash, shares = self._sample_random_portfolio()
+                self.initial_amount = cash
+                self.num_stock_shares = shares
+
         # 환경이 처음 시작할 때의 상태를 설정합니다.
         if self.initial:
             # 단일 주식이 아닌 여러 주식에 대한 상태를 초기화할 경우
@@ -621,7 +637,7 @@ class StockTradingEnv(gym.Env):
                 state = (
                     [self.initial_amount]  # 시작할 때 보유 현금
                     + [self.data.close]  # 주식의 가격
-                    + [0] * self.stock_dim  # 보유 주식 수는 0으로 설정
+                    + list(self.num_stock_shares)  # 초기 보유 주식 수를 반영
                     # 기술적 지표들의 값들을 추가합니다.
                     + sum(([self.data[tech]] for tech in self.tech_indicator_list), [])
                 )
@@ -654,6 +670,69 @@ class StockTradingEnv(gym.Env):
 
         # 설정된 상태를 반환합니다.
         return state
+
+    def _current_price_snapshot(self):
+        if len(self.df.tic.unique()) > 1:
+            tickers = self.data.tic.values.tolist()
+            prices = self.data.close.values.tolist()
+        else:
+            ticker = self.df.tic.unique()[0]
+            tickers = [ticker]
+            prices = [float(self.data.close)]
+        return tickers, prices
+
+    def _sample_random_portfolio(self):
+        cfg = self.portfolio_config
+        if cfg is None:
+            return float(self.base_initial_amount), list(self.base_num_stock_shares)
+
+        tickers, prices = self._current_price_snapshot()
+        if not tickers:
+            return float(cfg.initial_cash), list(self.base_num_stock_shares)
+
+        base_rng = getattr(self, "np_random", None)
+        if base_rng is None:
+            try:
+                base_rng = np.random.default_rng()
+            except AttributeError:  # pragma: no cover - fallback for older numpy
+                base_rng = np.random.RandomState()
+
+        rand_int = base_rng.integers if hasattr(base_rng, "integers") else base_rng.randint
+        rand_choice = base_rng.choice
+        rand_perm = base_rng.permutation
+
+        min_positions = max(1, min(cfg.min_positions, len(tickers)))
+        max_positions = max(min_positions, min(cfg.max_positions, len(tickers)))
+        num_positions = int(rand_int(min_positions, max_positions + 1))
+        indices = np.arange(len(tickers))
+        chosen = rand_choice(indices, size=num_positions, replace=False)
+        per_ticker_cap = cfg.per_ticker_value_cap_ratio * cfg.target_stock_value
+
+        share_list = [0] * len(tickers)
+        actual_value = 0.0
+        remaining_value = cfg.target_stock_value
+
+        for idx in rand_perm(chosen):
+            if remaining_value <= 0:
+                break
+            price = prices[idx]
+            if price <= 0:
+                continue
+            cap_value = min(per_ticker_cap, remaining_value)
+            max_shares = int(cap_value // price)
+            if max_shares <= 0:
+                continue
+            shares = int(rand_int(1, max_shares + 1))
+            share_list[idx] += int(shares)
+            value = shares * price
+            actual_value += value
+            remaining_value = max(0.0, cfg.target_stock_value - actual_value)
+
+        # If no shares allocated due to price constraints, fall back to holding cash only
+        if all(share == 0 for share in share_list):
+            return float(cfg.initial_cash), [0] * len(tickers)
+
+        return float(cfg.initial_cash), share_list
 
     def _update_state(self):
         """
@@ -776,14 +855,16 @@ class StockTradingEnv(gym.Env):
             df_date.columns = ["date"]
 
             action_list = self.actions_memory
-            action_list = action_list[::2]
             df_actions = pd.DataFrame(action_list)
             df_actions.columns = self.data.tic.values
             df_actions.index = df_date.date
             # df_actions = pd.DataFrame({'date':date_list,'actions':action_list})
         else:
             date_list = self.date_memory[:-1]
-            action_list = self.actions_memory
+            action_list = [
+                actions[0] if isinstance(actions, (list, tuple, np.ndarray)) else actions
+                for actions in self.actions_memory
+            ]
             df_actions = pd.DataFrame({"date": date_list, "actions": action_list})
         return df_actions
 
@@ -791,8 +872,12 @@ class StockTradingEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def get_sb_env(self):
+    def get_sb_env(self, log_dir=None):
         e = DummyVecEnv([lambda: self])
-        obs = e.reset()
+        if log_dir is not None:
+            log_path = Path(log_dir)
+            log_path.mkdir(parents=True, exist_ok=True)
+            e = VecMonitor(e, str(log_path))
         e = VecNormalize(e, norm_obs=True, norm_reward=True, clip_obs=10.0)
+        obs = e.reset()
         return e, obs
