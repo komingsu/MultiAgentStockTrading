@@ -1,7 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Callable, Dict
+
+import torch.nn as nn
+
+
+def linear_schedule(initial_value: float, final_value: float) -> Callable[[float], float]:
+    """Create a linear learning-rate schedule from initial to final value."""
+
+    def _schedule(progress_remaining: float) -> float:
+        return final_value + (initial_value - final_value) * progress_remaining
+
+    return _schedule
 
 
 @dataclass(frozen=True)
@@ -48,10 +59,60 @@ DEFAULT_ALGO_CONFIG: Dict[str, dict] = {
     "ppo": {
         "timesteps": 1_000_000,
         "model_kwargs": {
-            "n_steps": 2048,
+            "n_steps": 512,
+            "batch_size": 512,
             "ent_coef": 0.01,
-            "learning_rate": 0.00025,
-            "batch_size": 64,
+            "learning_rate": linear_schedule(3e-4, 3e-5),
+            "target_kl": 0.015,
+            "use_sde": True,
+            "sde_sample_freq": 4,
+        },
+        "policy_kwargs": {
+            "net_arch": [
+                {
+                    "pi": [256, 256, 128],
+                    "vf": [256, 256, 128],
+                }
+            ],
+            "activation_fn": nn.ReLU,
+            "ortho_init": False,
+            "log_std_init": -2,
+            "full_std": False,
+            "use_expln": True,
+        },
+    },
+    "ppo_lstm": {
+        "timesteps": 1_000_000,
+        "policy": "MlpLstmPolicy",
+        "model_kwargs": {
+            "n_steps": 512,
+            "batch_size": 512,
+            "ent_coef": 0.01,
+            "learning_rate": linear_schedule(3e-4, 3e-5),
+            "target_kl": 0.015,
+            "use_sde": True,
+            "sde_sample_freq": 4,
+            "n_epochs": 10,
+            "gamma": 0.99,
+            "gae_lambda": 0.95,
+            "clip_range": 0.2,
+        },
+        "policy_kwargs": {
+            "net_arch": [
+                {
+                    "pi": [256, 256, 128],
+                    "vf": [256, 256, 128],
+                }
+            ],
+            "activation_fn": nn.ReLU,
+            "ortho_init": False,
+            "log_std_init": -2,
+            "full_std": False,
+            "use_expln": True,
+            "lstm_hidden_size": 256,
+            "n_lstm_layers": 1,
+            "shared_lstm": False,
+            "enable_critic_lstm": True,
         },
     },
     "td3": {

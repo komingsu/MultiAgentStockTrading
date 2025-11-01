@@ -15,6 +15,8 @@ from stable_baselines3.common.callbacks import BaseCallback, CallbackList  # Cal
 from stable_baselines3.common.noise import NormalActionNoise  # Noise for continuous action spaces
 from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise  # Ornstein-Uhlenbeck noise for continuous action spaces
 
+from sb3_contrib import RecurrentPPO
+
 import config
 from env import StockTradingEnv
 from hyperparams import DEFAULT_ALGO_CONFIG
@@ -26,8 +28,12 @@ try:  # pragma: no cover - optional tensorboard dependency
 except ImportError:  # pragma: no cover
     TENSORBOARD_AVAILABLE = False
 
-MODELS = {"a2c": A2C, "ddpg": DDPG, "td3": TD3, "sac": SAC, "ppo": PPO}
+MODELS = {"a2c": A2C, "ddpg": DDPG, "td3": TD3, "sac": SAC, "ppo": PPO, "ppo_lstm": RecurrentPPO}
 MODEL_KWARGS = {name: deepcopy(DEFAULT_ALGO_CONFIG[name]["model_kwargs"]) for name in MODELS.keys()}
+POLICY_KWARGS = {
+    name: deepcopy(DEFAULT_ALGO_CONFIG[name].get("policy_kwargs", {}))
+    for name in MODELS.keys()
+}
 
 NOISE = {
     "normal": NormalActionNoise,
@@ -49,7 +55,6 @@ class TensorboardCallback(BaseCallback):
         except BaseException as error:
             try:
                 self.logger.record(key="train/reward", value=self.locals["reward"][0])
-
             except BaseException as inner_error:
                 # Handle the case where neither "rewards" nor "reward" is found
                 self.logger.record(key="train/reward", value=None)
@@ -57,7 +62,7 @@ class TensorboardCallback(BaseCallback):
                 print("Original Error:", error)
                 print("Inner Error:", inner_error)
         return True
-    
+
 class DRLAgent:
     """Provides implementations for DRL algorithms
 
@@ -99,14 +104,37 @@ class DRLAgent:
             )  # this is more informative than NotImplementedError("NotImplementedError")
 
         if model_kwargs is None:
-            model_kwargs = MODEL_KWARGS[model_name]
+            model_kwargs = deepcopy(MODEL_KWARGS[model_name])
+        if policy_kwargs is None:
+            policy_kwargs = deepcopy(POLICY_KWARGS.get(model_name, {}))
+
+        if model_name == "ppo_lstm" and policy == "MlpPolicy":
+            policy = "MlpLstmPolicy"
+
+        if model_name in {"ppo", "ppo_lstm"} and "action_noise" in model_kwargs:
+            # PPO with gSDE handles exploration internally, so external action noise must be disabled.
+            model_kwargs.pop("action_noise", None)
 
         if "action_noise" in model_kwargs:
             n_actions = self.env.action_space.shape[-1]
             model_kwargs["action_noise"] = NOISE[model_kwargs["action_noise"]](
                 mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions)
             )
+
+        if model_name in {"ppo", "ppo_lstm"}:
+            print(
+                "gSDE_enabled=%s|sde_sample_freq=%s|log_std_init=%s|full_std=%s|use_expln=%s"
+                % (
+                    model_kwargs.get("use_sde", False),
+                    model_kwargs.get("sde_sample_freq"),
+                    policy_kwargs.get("log_std_init"),
+                    policy_kwargs.get("full_std"),
+                    policy_kwargs.get("use_expln"),
+                )
+            )
         print(model_kwargs)
+        if policy_kwargs:
+            print(policy_kwargs)
         effective_tb_log = tensorboard_log if TENSORBOARD_AVAILABLE else None
         return MODELS[model_name](
             policy=policy,
@@ -140,27 +168,48 @@ class DRLAgent:
         return model
 
     @staticmethod
-    def DRL_prediction(model, environment, deterministic=True):
+    def DRL_prediction(model, environment, deterministic=True, vec_env=None, initial_obs=None):
         """
         정적 메서드로, 훈련된 모델을 사용하여 테스트 데이터셋에서의 예측을 수행
-        
+
         deterministic: 예측의 확정성 여부를 결정
-        
+
         return: 예측 과정에서 얻은 account_memory와 actions_memory
         """
-        test_env, test_obs = environment.get_sb_env()
+        if vec_env is None:
+            test_env, test_obs = environment.get_sb_env()
+            if initial_obs is not None:
+                test_obs = initial_obs
+        else:
+            test_env = vec_env
+            if initial_obs is not None:
+                test_obs = initial_obs
+            else:
+                test_obs = test_env.reset()
         account_memory = None  # This help avoid unnecessary list creation
         actions_memory = None  # optimize memory consumption
         # state_memory=[] #add memory pool to store states
-
-        test_env.reset()
         max_steps = len(environment.df.index.unique()) - 1
 
+        is_recurrent = bool(getattr(getattr(model, "policy", None), "recurrent", False))
+        lstm_states = None
+        episode_starts = np.ones(test_env.num_envs, dtype=bool) if is_recurrent else None
+
         for i in range(len(environment.df.index.unique())):
-            action, _states = model.predict(test_obs, deterministic=deterministic)
+            if is_recurrent:
+                action, lstm_states = model.predict(
+                    test_obs,
+                    state=lstm_states,
+                    episode_start=episode_starts,
+                    deterministic=deterministic,
+                )
+            else:
+                action, _states = model.predict(test_obs, deterministic=deterministic)
             # account_memory = test_env.env_method(method_name="save_asset_memory")
             # actions_memory = test_env.env_method(method_name="save_action_memory")
             test_obs, rewards, dones, info = test_env.step(action)
+            if is_recurrent:
+                episode_starts = np.array(dones, dtype=bool)
 
             if (
                 i == max_steps - 1
