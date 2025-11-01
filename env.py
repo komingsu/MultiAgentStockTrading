@@ -133,6 +133,7 @@ class StockTradingEnv(gym.Env):
         self.iteration = iteration
         self.portfolio_config = portfolio_config
         self.random_start = bool(random_start and portfolio_config is not None)
+        self._episode_summaries: List[dict] = []
         # initalize state
         self._seed()
         self.state = self._initiate_state()
@@ -374,6 +375,7 @@ class StockTradingEnv(gym.Env):
             df_total_value["daily_return"] = df_total_value["account_value"].pct_change(1)
             
             # 샤프 지수 계산 (일일 수익률의 평균 / 일일 수익률의 표준편차)
+            sharpe = None
             if df_total_value["daily_return"].std() != 0:
                 sharpe = (
                     (252**0.5) *  # 연간화 계수
@@ -387,16 +389,39 @@ class StockTradingEnv(gym.Env):
             df_rewards["date"] = self.date_memory[:-1]
             
             # 설정된 print_verbosity에 따라 로깅 정보 출력
-            if self.episode % self.print_verbosity == 0:
-                print(f"day: {self.day}, episode: {self.episode}")
-                print(f"begin_total_asset: {self.asset_memory[0]:0.2f}")
-                print(f"end_total_asset: {end_total_asset:0.2f}")
-                print(f"total_reward: {tot_reward:0.2f}")
-                print(f"total_cost: {self.cost:0.2f}")
-                print(f"total_trades: {self.trades}")
-                if df_total_value["daily_return"].std() != 0:
-                    print(f"Sharpe: {sharpe:0.3f}")
-                print("=================================")
+            summary = {
+                "day": int(self.day),
+                "episode": int(self.episode),
+                "begin_total_asset": float(self.asset_memory[0]),
+                "end_total_asset": float(end_total_asset),
+                "total_reward": float(tot_reward),
+                "total_cost": float(self.cost),
+                "total_trades": int(self.trades),
+                "sharpe": float(sharpe) if sharpe is not None else None,
+                "mode": self.mode,
+                "model_name": self.model_name,
+            }
+            self._episode_summaries.append(summary)
+            if len(self._episode_summaries) > 10000:
+                self._episode_summaries = self._episode_summaries[-5000:]
+
+            if (
+                self.print_verbosity is not None
+                and self.print_verbosity > 0
+                and self.episode % self.print_verbosity == 0
+            ):
+                log_parts = [
+                    f"day={summary['day']}",
+                    f"episode={summary['episode']}",
+                    f"begin_total_asset={summary['begin_total_asset']:.2f}",
+                    f"end_total_asset={summary['end_total_asset']:.2f}",
+                    f"total_reward={summary['total_reward']:.2f}",
+                    f"total_cost={summary['total_cost']:.2f}",
+                    f"total_trades={summary['total_trades']}",
+                ]
+                if summary["sharpe"] is not None:
+                    log_parts.append(f"sharpe={summary['sharpe']:.3f}")
+                LOGGER.info("episode_summary|%s", "|".join(log_parts))
                 
             # 모델 이름과 모드가 설정되었다면 결과를 파일로 저장
             if (self.model_name != "") and (self.mode != ""):
@@ -867,6 +892,11 @@ class StockTradingEnv(gym.Env):
             ]
             df_actions = pd.DataFrame({"date": date_list, "actions": action_list})
         return df_actions
+
+    def pop_episode_summaries(self):
+        summaries = list(self._episode_summaries)
+        self._episode_summaries.clear()
+        return summaries
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
