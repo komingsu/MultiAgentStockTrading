@@ -168,6 +168,11 @@ def build_env_kwargs(
     amount = initial_amount if initial_amount is not None else PORTFOLIO_INIT.initial_cash
     buy_cost = env_params.buy_cost_pct
     sell_cost = env_params.sell_cost_pct
+    exec_mode = env_params.exec_mode
+    adv_fraction = env_params.adv_fraction
+    limit_offset_bps = env_params.limit_offset_bps
+    slippage_bps = env_params.slippage_bps
+    day_order_only = env_params.day_order_only
     return {
         "hmax": env_params.hmax,
         "initial_amount": amount,
@@ -180,6 +185,11 @@ def build_env_kwargs(
         "action_space": stock_dim,
         "reward_scaling": env_params.reward_scaling,
         "print_verbosity": None,
+        "exec_mode": exec_mode,
+        "adv_fraction": adv_fraction,
+        "limit_offset_bps": limit_offset_bps,
+        "slippage_bps": slippage_bps,
+        "day_order_only": day_order_only,
     }
 
 

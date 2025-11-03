@@ -1,85 +1,79 @@
-# stockRL
+# StockRL Live Trading MVP — 빠른 시작(운영자용)
 
-강화학습 기반 한국 주식 트레이딩 연구용 저장소입니다. KIS/KRX 데이터를 `build_kis_dataset.py`로 준비하고, 단일 DRL 에이전트를 원하는 만큼 반복 학습하는 구조입니다.
+이 레포는 한국투자증권(KIS) Open API를 이용한 한국 주식 실거래 직전(MVP) 파이프라인을 제공합니다.
+핵심 경로(Env → AOC → to_orders → Preflight → LiveRouter)가 동일 규칙으로 동작하도록 설계되어,
+백테스트와 라이브의 동등성(Parity)을 유지합니다.
 
-## 환경 요약
-- Python 3.10 이상 (권장 3.11)
-- 주요 의존성: stable-baselines3, gymnasium, numpy, pandas, matplotlib
-- 데이터 파일: `data/train_data.csv`, `data/stock_test_data.csv`, `data/trade_data.csv`
+자세한 운영 매뉴얼은 `docs/OPERATOR_GUIDE.md`를 참고하세요.
 
-## 학습 파이프라인
-### 1. 데이터 재구성 (선택)
+## 1) 한 줄 요약 & 범위
+- 지원 실행 모드: MOO(개장가 시장가), LIMIT_OHLC(일봉 지정가)
+- 비범위: 전략/모델 변경, 데이터 파이프라인 확장, 정정/취소/추격 체결
+
+## 2) 설치/요구사항
+- Python 3.11 권장, 가상환경 권장
+- KIS 자격/계좌(모의 가능): `KIS_APP_KEY`, `KIS_APP_SECRET`, `KIS_ACCOUNT_NO`, `KIS_PRODUCT_CODE=01`
+- (선택) `.env`에 KIS 키/토큰 관리. 민감정보는 반드시 비커밋
+
+## 3) 디렉터리 맵(요약)
+- `env.py`                : 실행 모드(MOO/LIMIT_OHLC) 규칙 포함 Gym 환경
+- `execution/*.py`        : AOC(plan_from_weights), OrderSpec, SimBroker(Parity)
+- `live/route.py`         : 수량→OrderSpec 변환(틱 라운딩/정수 호가)
+- `live/kis_router.py`    : KIS REST 주문 래퍼(모의/실전 공용)
+- `scripts/infer_action.py`: 추론→AOC→Plan JSON 생성
+- `scripts/submit_orders.py`: 플랜 제출(드라이런/모의/실전) + 프리플라이트
+- `tests/`                : Parity/틱/플래너 유닛 테스트(24개)
+
+## 4) 3줄 런북(자가 테스트 → 플랜 생성 → 드라이런)
 ```bash
-python build_kis_dataset.py \
-  --start 2023-01-01 --end 2025-10-21 \
-  --train-start 2023-01-02 --train-end 2024-12-30 \
-  --test-start 2025-01-02 --test-end 2025-04-29 \
-  --trade-start 2025-05-01 --trade-end 2025-08-31 \
-  --backtest-end 2025-10-21
-```
-(인자를 생략하면 `config.py`의 기본 분할 사용)
-
-### 2. 단일 에이전트 학습
-```bash
-python scripts/run_train_agent.py \
-  --algo ppo \
-  --experiment-name exp_ppo
-```
-- 지원 알고리즘: `a2c`, `ddpg`, `ppo`, `sac`, `td3`
-- 옵션:
-  - `--timesteps-scale`, `--total-timesteps`: 학습 스텝 조정
-  - `--turbulence-threshold`: trade 평가 시 임계치 지정
-- 결과: `experiments/exp_ppo/` 아래에 모델(`models/agent_ppo.zip`), test/trade 자산 CSV·PNG, 로그(`logs/experiment.log`) 저장
-
-### 랜덤 초기 포트폴리오
-학습 에피소드마다 `hyperparams.py`에 정의된 규칙으로 초기 상태를 샘플링합니다.
-- 총자본 1억: 현금 5천만 + 주식 목표 5천만
-- 초기 보유 종목 3~8개, 종목당 최대 25% 가치 캡
-- 남는 금액은 현금으로 유지
-
-## 액션 추론 CLI
-이미 학습된 모델로 현재 보유 상태에서 다음 액션을 추론할 수 있습니다.
-```bash
+pytest -q tests                               # 기대: 24 passed
 python scripts/infer_action.py \
-  --experiment experiments/exp_ppo \
-  --algo ppo \
-  --cash 25000000 \
-  --holdings holdings.json \
-  --date 2025-08-29
+  --experiment experiments/exp_ppo --algo ppo \
+  --cash 25000000 --holdings '{"005930": 10}' \
+  --write-plan-json logs/plans/plan_$(date +%Y%m%d).json
+python scripts/submit_orders.py \
+  --plan-json logs/plans/plan_$(date +%Y%m%d).json \
+  --exec-mode MOO --limit-offset-bps 0 --dry-run --use-paper \
+  --holiday-file config/holiday_kr.json --output logs/submit_orders_dryrun.json
 ```
-- `holdings`는 파일 경로 또는 JSON 문자열 (`{"005930": 120, ...}`)
-- 미지정 시 `data/trade_data.csv` 마지막 날짜 사용
-- 출력: 원 액션, 실행 액션, 체결 후 수량, 현금/총자산 변화
 
-## 하이퍼파라미터 관리
-`hyperparams.py`
-- `DEFAULT_ALGO_CONFIG`: 각 알고리즘 timesteps 및 SB3 인자
-- `ENV_PARAMS`: `hmax`, 거래비용, 보상 스케일
-- `PORTFOLIO_INIT`: 초기 포트폴리오 총액·현금 비중·종목수 범위·티커별 캡
-수정 시 학습/추론/환경이 자동으로 반영됩니다.
+## 5) 일일 운영 루틴
+1) 전일 데이터 동기화 → 2) 인퍼런스(AOC)로 플랜 생성 → 3) 드라이런 프리플라이트
+→ 4) (선택) 모의 제출 → 5) 실전 제출(소액·저빈도) → 6) 응답/주문번호 보관
 
-## 소스 구조
-- `config.py` : 데이터 기간, 지표 목록, 공통 경로
-- `hyperparams.py` : 모든 하이퍼파라미터
-- `env.py` : Gymnasium 환경 + 랜덤 초기 포트폴리오 로직
-- `train.py` : 실험 디렉터리/로그 관리, 단일 에이전트 학습/평가 유틸
-- `models.py` : SB3 에이전트 래퍼(get/train/predict)
-- `scripts/`
-  - `run_train_agent.py` : 학습/평가 CLI
-  - `infer_action.py` : 보유 상태 → 액션 추론 CLI
-  - `plot_training_results.py` : SB3 모니터 로그 기반 학습 곡선 PNG 생성
-- `vis_util.py` : 자산 곡선 시각화
-- `data/` : 전처리된 CSV
-- `experiments/` : 실험 산출물
+## 6) 시간/휴일 가드 & 플랜 날짜 주의
+- 플랜 파일명 날짜(YYYYMMDD)가 오늘(KST)와 다르면 제출 차단
+- 시간창: MOO 08:30–09:00 / LIMIT 09:00–15:20 (KST)
+- `--force-submit`은 테스트 전용
 
-## 로그 및 산출물
-- 학습/평가지표는 `logs/experiment.log`에 `metric|value|step` 형식으로 누적
-- SB3 모니터 & 로거: `logs/sb3/train_monitor/monitor.csv`, `logs/sb3/eval/`(평가 콜백), `logs/sb3/progress.csv`, TensorBoard 이벤트(`logs/sb3/events.*`, `tensorboard` 설치 시)
-- Test/Trade 평가 결과는 `results/` CSV + `plots/` PNG
+## 7) KRX 틱·정수 호가 요약
+| 가격대(원)            | 틱(원) |
+|---------------------|-------|
+| < 2,000             | 1     |
+| 2,000 ~ 4,999       | 5     |
+| 5,000 ~ 9,999       | 10    |
+| 10,000 ~ 19,999     | 10    |
+| 20,000 ~ 49,999     | 50    |
+| 50,000 ~ 99,999     | 100   |
+| 100,000 ~ 199,999   | 100   |
+| 200,000 ~ 499,999   | 500   |
+| ≥ 500,000           | 1,000 |
 
-## 기타 스크립트
-- `helper_function.py` : 지표 계산, 데이터 스플릿 유틸
-- `kis_auth.py`, `refresh_kis_token.py` : KIS 인증/토큰 관리
-- `build_kis_dataset.py` : KIS API 기반 데이터 빌더
+매수=내림, 매도=올림으로 라운딩하며, LIMIT 가격은 정수 문자열로 전송합니다.
 
-필요 시 `PORTFOLIO_INIT` 값을 조정하거나 `run_train_agent.py`를 반복 실행해 다양한 모델을 얻으세요.
+## 8) 안전장치(요약)
+- Fail-Closed: 프리플라이트 실패/네트워크/토큰 오류 시 즉시 중단
+- 401/429/5xx 1회 재시도(백오프)
+- 멱등성: `client_order_id` 중복 제출 차단
+
+## 9) Troubleshooting(대표 에러 ↔ 조치)
+- `Plan date ... does not match today (KST)` → 당일 플랜으로 재생성 또는 `--force-submit`
+- `sell_qty_exceeds_position:SYM:A>B` → 보유수량 확인, 플랜 조정
+- `insufficient_cash:X>Y` → 가용 현금 대비 비용 축소(플랜 조정/오프셋 상향)
+- `invalid limit price` → 틱/정수 호가 규칙 점검
+- `retry_exhausted` → 네트워크/인증 실패. 로그 확인 후 재시도
+
+## 10) 법적/리스크 면책
+본 저장소는 연구용 자료입니다. 실제 투자/운용에 따른 손실 책임은 전적으로 사용자에게 있습니다.
+
+— 운영 매뉴얼 전체판: `docs/OPERATOR_GUIDE.md`

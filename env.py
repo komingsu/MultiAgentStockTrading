@@ -1,5 +1,19 @@
 from __future__ import annotations
 
+"""
+강화학습 환경(StockTradingEnv) — 실거래 동등 규칙(MOO/LIMIT_OHLC) 반영
+
+핵심 개념:
+- ExecutionMode: MOO(개장가 시장가) / LIMIT_OHLC(전일 종가±offset으로 t+1 OHLC 판정)
+- ExecutionSpec: ADV 캡/슬리피지/수수료/오프셋/TIF 등 실행 파라미터 묶음
+- OrderFill: step()에서 심볼별 체결 결과 기록(부분체결/미체결 사유 포함)
+
+본 파일의 주석/도큐스트링은 동작을 바꾸지 않고, env→AOC→to_orders→Sim/LIVE
+경로의 Parity를 독자가 이해하기 쉽게 설명하는 목적만 가진다.
+"""
+
+from dataclasses import dataclass
+from enum import Enum
 from typing import List
 
 import logging
@@ -24,6 +38,59 @@ from hyperparams import PortfolioInitParams
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+class ExecutionMode(str, Enum):
+    """실행/체결 모드.
+
+    - MOO: 오늘 관측→내일 개장 동시호가에 시장가 주문, 개장가로 전량 체결(초기 단순화)
+    - LIMIT_OHLC: 전일 종가±offset(bps)로 지정가를 정하고 t+1 OHLC로 1일 체결 판정
+    """
+    MOO = "MOO"
+    LIMIT_OHLC = "LIMIT_OHLC"
+
+
+@dataclass(frozen=True)
+class ExecutionSpec:
+    """실행 파라미터 묶음.
+
+    mode: 실행 모드(MOO/LIMIT_OHLC)
+    adv_frac: t+1 거래량 비율(ADV 캡)
+    slippage_bps: 추가 슬리피지(bps)
+    fee_buy/sell: 종목별 수수료율 배열
+    limit_offset_bps: LIMIT 지정가 오프셋(bps)
+    day_only: DAY(당일) 주문만 사용 여부
+    """
+    mode: ExecutionMode
+    adv_frac: float
+    slippage_bps: float
+    fee_buy: np.ndarray
+    fee_sell: np.ndarray
+    limit_offset_bps: float = 0.0
+    day_only: bool = True
+
+    @property
+    def slippage_decimal(self) -> float:
+        return self.slippage_bps / 10_000.0
+
+
+@dataclass
+class OrderFill:
+    """단일 심볼 체결 결과.
+
+    requested_qty: 요청 수량
+    filled_qty: 실제 체결 수량(부분 체결 가능)
+    fill_price: 체결가격(None은 미체결)
+    limit_price: LIMIT 지정가(시장가는 None)
+    reason: 미체결/클립 사유 키(예: limit_not_reached, adv_cap_zero, insufficient_cash, no_position)
+    """
+    symbol: str
+    side: str
+    requested_qty: int
+    filled_qty: int
+    fill_price: float | None
+    limit_price: float | None
+    reason: str | None
 
 
 class StockTradingEnv(gym.Env):
@@ -99,6 +166,11 @@ class StockTradingEnv(gym.Env):
         model_name="",
         mode="",
         iteration="",
+        exec_mode: str = ExecutionMode.MOO.value,
+        adv_fraction: float = 0.2,
+        limit_offset_bps: float = 0.0,
+        slippage_bps: float = 0.0,
+        day_order_only: bool = True,
         random_start: bool = False,
         portfolio_config: PortfolioInitParams | None = None,
     ):
@@ -110,8 +182,28 @@ class StockTradingEnv(gym.Env):
         self.num_stock_shares = list(num_stock_shares)
         self.base_initial_amount = initial_amount
         self.initial_amount = initial_amount  # refreshed each episode
-        self.buy_cost_pct = buy_cost_pct
-        self.sell_cost_pct = sell_cost_pct
+        self.buy_cost_pct = list(buy_cost_pct)
+        self.sell_cost_pct = list(sell_cost_pct)
+        self._fee_buy = np.asarray(self.buy_cost_pct, dtype=float)
+        self._fee_sell = np.asarray(self.sell_cost_pct, dtype=float)
+        mode_value = exec_mode if isinstance(exec_mode, ExecutionMode) else ExecutionMode(exec_mode)
+        adv_value = 0.0 if adv_fraction is None else float(adv_fraction)
+        slip_value = 0.0 if slippage_bps is None else float(slippage_bps)
+        self.execution_spec = ExecutionSpec(
+            mode=mode_value,
+            adv_frac=float(max(adv_value, 0.0)),
+            slippage_bps=float(max(slip_value, 0.0)),
+            fee_buy=self._fee_buy,
+            fee_sell=self._fee_sell,
+            limit_offset_bps=float(limit_offset_bps if limit_offset_bps is not None else 0.0),
+            day_only=bool(day_order_only),
+        )
+        self._last_fills: list[OrderFill] = []
+        self._unique_day_indices = np.array(sorted(self.df.index.unique()))
+        self._n_trade_days = len(self._unique_day_indices)
+        self._max_day_index = (
+            int(self._unique_day_indices[-1]) if self._n_trade_days > 0 else 0
+        )
         self.reward_scaling = reward_scaling
         self.state_space = state_space
         self.action_space = action_space
@@ -120,7 +212,16 @@ class StockTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(self.state_space,)
         )
-        self.data = self.df.loc[self.day, :]
+        initial_slice = self.df.loc[self.day, :]
+        if isinstance(initial_slice, pd.Series):
+            initial_frame = initial_slice.to_frame().T
+        else:
+            initial_frame = initial_slice.copy()
+        if "tic" in initial_frame.columns:
+            self.ticker_list = initial_frame["tic"].tolist()
+        else:
+            self.ticker_list = [str(initial_frame.iloc[0].get("tic", "TIC0"))]
+        self.data = self._ensure_ticker_order(initial_frame)
         self.terminal = False
         self.make_plots = make_plots
         self.print_verbosity = print_verbosity
@@ -133,31 +234,242 @@ class StockTradingEnv(gym.Env):
         self.iteration = iteration
         self.portfolio_config = portfolio_config
         self.random_start = bool(random_start and portfolio_config is not None)
+        self._tracking_enabled = not (self.mode == "inference")
         self._episode_summaries: List[dict] = []
         # initalize state
         self._seed()
         self.state = self._initiate_state()
-
-        # initialize reward
+        # initialize reward tracking and state memories
         self.reward = 0
         self.turbulence = 0
         self.cost = 0
         self.trades = 0
         self.episode = 0
-        # memorize all the total balance change
         self.asset_memory = [
             self.initial_amount
             + np.sum(
                 np.array(self.num_stock_shares)
                 * np.array(self.state[1 : 1 + self.stock_dim])
             )
-        ]  # the initial total asset is calculated by cash + sum (num_share_stock_i * price_stock_i)
+        ]
         self.rewards_memory = []
         self.actions_memory = []
-        self.state_memory = (
-            []
-        )  # we need sometimes to preserve the state in the middle of trading process
+        self.state_memory = []
         self.date_memory = [self._get_date()]
+
+    def _ensure_ticker_order(self, frame: pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the provided day frame ordered to match the environment's ticker ordering.
+        Ensures downstream vector operations align with the agent's state representation.
+        """
+
+        if isinstance(frame, pd.Series):
+            frame = frame.to_frame().T
+        if self.stock_dim <= 1 or "tic" not in frame.columns:
+            return frame.reset_index(drop=True)
+        if not hasattr(self, "ticker_list"):
+            return frame.reset_index(drop=True)
+        ordered = frame.set_index("tic")
+        missing = [tic for tic in self.ticker_list if tic not in ordered.index]
+        if missing:
+            raise KeyError(f"Missing tickers {missing} for day frame alignment")
+        ordered = ordered.loc[self.ticker_list]
+        return ordered.reset_index()
+
+    def _get_day_frame(self, day_idx: int) -> pd.DataFrame:
+        """Fetch a day's DataFrame in the canonical ticker order."""
+
+        day_slice = self.df.loc[day_idx, :]
+        if isinstance(day_slice, pd.Series):
+            frame = day_slice.to_frame().T
+        else:
+            frame = day_slice.copy()
+        return self._ensure_ticker_order(frame)
+
+    def _extract_column_array(self, frame: pd.DataFrame, column: str) -> np.ndarray:
+        """Extract the requested column as a float numpy array."""
+
+        return frame[column].to_numpy(dtype=float, copy=True)
+
+    def _current_holdings_array(self) -> np.ndarray:
+        return np.array(
+            self.state[(self.stock_dim + 1) : (self.stock_dim * 2 + 1)],
+            dtype=float,
+        )
+
+    @staticmethod
+    def _compute_total_asset(cash: float, prices: np.ndarray, holdings: np.ndarray) -> float:
+        return float(cash + float(np.dot(prices, holdings)))
+
+    def _adv_cap_qty(self, volume: float) -> int | None:
+        adv = self.execution_spec.adv_frac
+        if adv is None:
+            return None
+        adv = max(float(adv), 0.0)
+        if adv == 0.0:
+            return 0
+        return max(int(np.floor(float(volume) * adv)), 0)
+
+    def _compute_limit_price(self, reference_price: float, side: str) -> float:
+        offset_ratio = self.execution_spec.limit_offset_bps / 10_000.0
+        if side.upper() == "BUY":
+            return reference_price * (1.0 - offset_ratio)
+        return reference_price * (1.0 + offset_ratio)
+
+    def _execute_orders(
+        self,
+        desired_qtys: np.ndarray,
+        current_close: np.ndarray,
+        next_frame: pd.DataFrame,
+    ) -> tuple[np.ndarray, list[OrderFill]]:
+        """t→t+1 체결 시뮬레이션(MOO/LIMIT_OHLC 규칙).
+
+        - MOO: 개장가(open)로 요청 수량을 체결(ADV/현금/보유로 클립)
+        - LIMIT_OHLC: 전일 종가±offset으로 지정가 산출 후,
+            BUY: open≤limit → open 체결; else low≤limit → limit 체결; else 미체결
+            SELL: open≥limit → open 체결; else high≥limit → limit 체결; else 미체결
+        - 이후 수수료/슬리피지 반영, 현금/보유/ADV 캡에 의해 부분체결 가능
+        """
+
+        fills = np.zeros_like(desired_qtys, dtype=int)
+        records: list[OrderFill] = []
+
+        open_prices = self._extract_column_array(next_frame, "open")
+        high_prices = self._extract_column_array(next_frame, "high")
+        low_prices = self._extract_column_array(next_frame, "low")
+        volumes = self._extract_column_array(next_frame, "volume")
+
+        cash_balance = float(self.state[0])
+        holdings = self._current_holdings_array()
+        slippage = self.execution_spec.slippage_decimal
+
+        for idx, raw_qty in enumerate(desired_qtys):
+            qty = int(raw_qty)
+            if qty == 0:
+                continue
+
+            side = "BUY" if qty > 0 else "SELL"
+            requested_qty = abs(qty)
+            ticker = self.ticker_list[idx] if idx < len(self.ticker_list) else str(idx)
+            limit_price = None
+            fill_price = None
+            filled_qty = 0
+            reason = None
+
+            adv_cap = self._adv_cap_qty(volumes[idx])
+            if adv_cap == 0:
+                reason = "adv_cap_zero"
+            else:
+                effective_qty = requested_qty
+                if adv_cap is not None:
+                    effective_qty = min(effective_qty, adv_cap)
+                if effective_qty <= 0:
+                    reason = "adv_cap_limit"
+                else:
+                    if self.execution_spec.mode is ExecutionMode.MOO:
+                        fill_price = float(open_prices[idx])
+                        filled_qty = effective_qty
+                    else:
+                        reference_price = float(current_close[idx])
+                        limit_price = float(self._compute_limit_price(reference_price, side))
+                        open_px = float(open_prices[idx])
+                        high_px = float(high_prices[idx])
+                        low_px = float(low_prices[idx])
+                        if side == "BUY":
+                            if open_px <= limit_price:
+                                fill_price = open_px
+                                filled_qty = effective_qty
+                            elif low_px <= limit_price:
+                                fill_price = limit_price
+                                filled_qty = effective_qty
+                            else:
+                                reason = "limit_not_reached"
+                        else:
+                            if open_px >= limit_price:
+                                fill_price = open_px
+                                filled_qty = effective_qty
+                            elif high_px >= limit_price:
+                                fill_price = limit_price
+                                filled_qty = effective_qty
+                            else:
+                                reason = "limit_not_reached"
+
+                    if filled_qty > 0 and reason is None:
+                        if side == "BUY":
+                            fee = float(self._fee_buy[idx])
+                            total_multiplier = 1.0 + fee + slippage
+                            max_cash_qty = int(
+                                np.floor(cash_balance / (fill_price * total_multiplier))
+                            )
+                            if max_cash_qty <= 0:
+                                filled_qty = 0
+                                reason = "insufficient_cash"
+                            else:
+                                filled_qty = min(filled_qty, max_cash_qty)
+                                if filled_qty <= 0:
+                                    reason = "insufficient_cash"
+                        else:
+                            fee = float(self._fee_sell[idx])
+                            total_multiplier = 1.0 - (fee + slippage)
+                            if total_multiplier <= 0:
+                                filled_qty = 0
+                                reason = "invalid_costs"
+                            else:
+                                available = int(np.floor(holdings[idx]))
+                                filled_qty = min(filled_qty, available)
+                                if filled_qty <= 0:
+                                    reason = "no_position"
+
+            if filled_qty > 0 and reason is None:
+                if side == "BUY":
+                    fee = float(self._fee_buy[idx])
+                    total_multiplier = 1.0 + fee + slippage
+                    cash_delta = fill_price * filled_qty * total_multiplier
+                    cash_balance -= cash_delta
+                    holdings[idx] += filled_qty
+                    self.cost += fill_price * filled_qty * (fee + slippage)
+                    fills[idx] = filled_qty
+                else:
+                    fee = float(self._fee_sell[idx])
+                    total_multiplier = 1.0 - (fee + slippage)
+                    cash_delta = fill_price * filled_qty * total_multiplier
+                    cash_balance += cash_delta
+                    holdings[idx] -= filled_qty
+                    self.cost += fill_price * filled_qty * (fee + slippage)
+                    fills[idx] = -filled_qty
+                self.trades += 1
+                records.append(
+                    OrderFill(
+                        symbol=ticker,
+                        side=side,
+                        requested_qty=requested_qty,
+                        filled_qty=filled_qty,
+                        fill_price=fill_price,
+                        limit_price=limit_price,
+                        reason=None,
+                    )
+                )
+            else:
+                records.append(
+                    OrderFill(
+                        symbol=ticker,
+                        side=side,
+                        requested_qty=requested_qty,
+                        filled_qty=0,
+                        fill_price=None,
+                        limit_price=limit_price,
+                        reason=reason,
+                    )
+                )
+
+        self.state[0] = float(cash_balance)
+        holdings_int = holdings.astype(int)
+        self.state[
+            (self.stock_dim + 1) : (self.stock_dim * 2 + 1)
+        ] = holdings_int.tolist()
+        self.num_stock_shares = holdings_int.tolist()
+        self._last_fills = records
+        return fills.astype(int), records
         #         self.logger = Logger('results',[CSVOutputFormat])
         # self.reset()
 
@@ -349,10 +661,13 @@ class StockTradingEnv(gym.Env):
         새로운 상태, 보상, 종료 여부 등을 계산합니다.
         """
         # 에피소드 종료 여부 판단: 현재 일자가 데이터의 유일한 인덱스 개수보다 많거나 같으면 종료
-        self.terminal = self.day >= len(self.df.index.unique()) - 1
+        self.terminal = self.day >= self._n_trade_days - 1
 
         # 만약 에피소드가 종료되었다면 (self.terminal == True)
         if self.terminal:
+            if not self._tracking_enabled:
+                info = {"fills": [fill.__dict__ for fill in getattr(self, "_last_fills", [])]}
+                return self.state, self.reward, self.terminal, False, info
             # 에피소드 종료 시 수행할 로직
             
             # 포트폴리오의 총 자산 가치를 계산
@@ -471,79 +786,58 @@ class StockTradingEnv(gym.Env):
                     self.model_name,
                 )
 
-            # 마지막으로 현재 상태, 보상, 종료 여부 등을 반환합니다
-            return self.state, self.reward, self.terminal, False, {}
+            info = {"fills": [fill.__dict__ for fill in getattr(self, "_last_fills", [])]}
+            return self.state, self.reward, self.terminal, False, info
 
         else:
-            # 에이전트가 결정한 액션을 확장하여 실제 매수 또는 매도할 주식 수를 결정합니다.
-            actions = actions * self.hmax  # 액션 값은 -1에서 1 사이로 스케일되어 있으며, 여기서 hmax를 곱해 실제 매수/매도 수량으로 변환합니다.
-            actions = actions.astype(int)  # 매수/매도는 주식의 일부분을 살 수 없으므로 정수로 변환합니다.
-            
-            # 시장의 불안정성이 설정된 임계값을 초과하는지 검사합니다.
-            if self.turbulence_threshold is not None:
-                if self.turbulence >= self.turbulence_threshold:
-                    # 시장이 불안정한 경우, 모든 주식을 매도하는 액션으로 설정합니다.
-                    actions = np.array([-self.hmax] * self.stock_dim)
-                    
-            # 매 스텝 시작 전의 총 자산을 계산합니다.
-            begin_total_asset = self.state[0] + sum(
-                np.array(self.state[1 : (self.stock_dim + 1)]) *
-                np.array(self.state[(self.stock_dim + 1) : (self.stock_dim * 2 + 1)])
-            )
-            # print("begin_total_asset:{}".format(begin_total_asset))
+            action_array = np.asarray(actions, dtype=float) * self.hmax
+            desired_qtys = action_array.astype(int)
 
-            # 액션 배열을 정렬하여 매도해야 할 주식과 매수해야 할 주식의 인덱스를 각각 구합니다.
-            argsort_actions = np.argsort(actions)
-            sell_index = argsort_actions[: np.where(actions < 0)[0].shape[0]]  # 매도 액션이 있는 인덱스
-            buy_index = argsort_actions[::-1][: np.where(actions > 0)[0].shape[0]]  # 매수 액션이 있는 인덱스
-            # 매도 액션을 수행합니다.
-            for index in sell_index:
-                # print(f"Num shares before: {self.state[index+self.stock_dim+1]}")
-                # print(f'take sell action before : {actions[index]}')
-                actions[index] = self._sell_stock(index, actions[index]) * (-1)
-                # print(f'take sell action after : {actions[index]}')
-                # print(f"Num shares after: {self.state[index+self.stock_dim+1]}")
-                
-            # 매수 액션을 수행합니다.
-            for index in buy_index:
-                # print('take buy action: {}'.format(actions[index]))
-                actions[index] = self._buy_stock(index, actions[index])
-                
-            # 수행된 액션들을 기록합니다.
-            self.actions_memory.append(actions.astype(int).tolist())
+            if self.turbulence_threshold is not None and self.turbulence >= self.turbulence_threshold:
+                desired_qtys = np.array([-self.hmax] * self.stock_dim, dtype=int)
 
-            # state: s -> s+1, 다음 거래일로 넘어갑니다.
-            self.day += 1
-            self.data = self.df.loc[self.day, :]
-            # 시장의 불안정성을 업데이트합니다.
+            current_close = self._extract_column_array(self.data, "close")
+            current_holdings = self._current_holdings_array()
+            cash_before = float(self.state[0])
+            begin_total_asset = self._compute_total_asset(cash_before, current_close, current_holdings)
+
+            next_day_index = self.day + 1
+            next_frame = self._get_day_frame(next_day_index)
+            fills, fill_records = self._execute_orders(desired_qtys, current_close, next_frame)
+            if self._tracking_enabled:
+                self.actions_memory.append(fills.astype(int).tolist())
+
+            self.day = next_day_index
+            self.data = next_frame
+
             if self.turbulence_threshold is not None:
-                if len(self.df.tic.unique()) == 1:
-                    self.turbulence = self.data[self.risk_indicator_col]
-                elif len(self.df.tic.unique()) > 1:
-                    self.turbulence = self.data[self.risk_indicator_col].values[0]
-            # 상태를 업데이트합니다.
+                if self.stock_dim == 1:
+                    self.turbulence = float(self.data[self.risk_indicator_col].iloc[0])
+                else:
+                    self.turbulence = float(self.data[self.risk_indicator_col].values[0])
+
             self.state = self._update_state()
-            
-            # 스텝 종료 후의 총 자산을 계산합니다.
-            end_total_asset = self.state[0] + sum(
-                np.array(self.state[1 : (self.stock_dim + 1)])
-                * np.array(self.state[(self.stock_dim + 1) : (self.stock_dim * 2 + 1)])
-            )
-            # 자산 변화를 기록합니다.
-            self.asset_memory.append(end_total_asset)
-            # 거래일을 기록합니다.
-            self.date_memory.append(self._get_date())
-            # 이번 스텝에서의 보상을 계산합니다.
-            self.reward = end_total_asset - begin_total_asset
-            # 보상을 기록합니다.
-            self.rewards_memory.append(self.reward)
-            # 보상에 스케일을 적용합니다.
-            self.reward = self.reward * self.reward_scaling
-            # 현재 상태를 기록합니다.
-            self.state_memory.append(self.state)
-            
-        # 현재 상태, 보상, 종료 여부, 추가 정보를 반환합니다.
-        return self.state, self.reward, self.terminal, False, {}
+
+            end_close = self._extract_column_array(self.data, "close")
+            end_holdings = self._current_holdings_array()
+            end_total_asset = self._compute_total_asset(float(self.state[0]), end_close, end_holdings)
+            self.num_stock_shares = end_holdings.astype(int).tolist()
+
+            raw_reward = end_total_asset - begin_total_asset
+            if self._tracking_enabled:
+                self.asset_memory.append(end_total_asset)
+                self.date_memory.append(self._get_date())
+                self.rewards_memory.append(raw_reward)
+                self.state_memory.append(self.state)
+            self.reward = raw_reward * self.reward_scaling
+
+            info = {
+                "fills": [fill.__dict__ for fill in fill_records],
+                "begin_total_asset": begin_total_asset,
+                "end_total_asset": end_total_asset,
+            }
+
+            return self.state, self.reward, self.terminal, False, info
 
     def reset(
         self,
@@ -571,7 +865,16 @@ class StockTradingEnv(gym.Env):
         # 거래를 시작할 날짜를 0으로 설정하여 새로운 에피소드를 시작합니다.
         self.day = 0
         # 현재 날짜에 해당하는 데이터를 데이터프레임에서 가져옵니다.
-        self.data = self.df.loc[self.day, :]
+        initial_slice = self.df.loc[self.day, :]
+        if isinstance(initial_slice, pd.Series):
+            initial_frame = initial_slice.to_frame().T
+        else:
+            initial_frame = initial_slice.copy()
+        if "tic" in initial_frame.columns:
+            self.ticker_list = initial_frame["tic"].tolist()
+        else:
+            self.ticker_list = [str(initial_frame.iloc[0].get("tic", "TIC0"))]
+        self.data = self._ensure_ticker_order(initial_frame)
         self.initial_amount = self.base_initial_amount
         self.num_stock_shares = list(self.base_num_stock_shares)
         # 상태를 초기 상태로 설정하는 내부 메서드를 호출합니다.
@@ -612,6 +915,7 @@ class StockTradingEnv(gym.Env):
         self.rewards_memory = []
         self.actions_memory = []
         self.date_memory = [self._get_date()]
+        self._last_fills = []
 
         # 초기 상태를 반환합니다.
         return self.state, {}
@@ -803,11 +1107,9 @@ class StockTradingEnv(gym.Env):
         return state
 
     def _get_date(self):
-        if len(self.df.tic.unique()) > 1:
-            date = self.data.date.unique()[0]
-        else:
-            date = self.data.date
-        return date
+        if isinstance(self.data, pd.DataFrame):
+            return self.data["date"].iloc[0]
+        return self.data["date"]
 
     def save_state_memory(self):
         """

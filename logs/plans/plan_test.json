@@ -1,0 +1,142 @@
+[
+  {
+    "symbol": "000250",
+    "desired_qty": 0,
+    "close": 143700.0
+  },
+  {
+    "symbol": "005930",
+    "desired_qty": 0,
+    "close": 55800.0
+  },
+  {
+    "symbol": "005935",
+    "desired_qty": 0,
+    "close": 46600.0
+  },
+  {
+    "symbol": "007660",
+    "desired_qty": 0,
+    "close": 34000.0
+  },
+  {
+    "symbol": "009150",
+    "desired_qty": 0,
+    "close": 121800.0
+  },
+  {
+    "symbol": "030530",
+    "desired_qty": 0,
+    "close": 4240.0
+  },
+  {
+    "symbol": "035900",
+    "desired_qty": 0,
+    "close": 68700.0
+  },
+  {
+    "symbol": "039030",
+    "desired_qty": 0,
+    "close": 117400.0
+  },
+  {
+    "symbol": "051910",
+    "desired_qty": 0,
+    "close": 225500.0
+  },
+  {
+    "symbol": "077970",
+    "desired_qty": 0,
+    "close": 24600.0
+  },
+  {
+    "symbol": "084370",
+    "desired_qty": 0,
+    "close": 34200.0
+  },
+  {
+    "symbol": "086520",
+    "desired_qty": 0,
+    "close": 51100.0
+  },
+  {
+    "symbol": "087010",
+    "desired_qty": 0,
+    "close": 175300.0
+  },
+  {
+    "symbol": "089030",
+    "desired_qty": 0,
+    "close": 34350.0
+  },
+  {
+    "symbol": "108490",
+    "desired_qty": 0,
+    "close": 34750.0
+  },
+  {
+    "symbol": "131970",
+    "desired_qty": 0,
+    "close": 25650.0
+  },
+  {
+    "symbol": "141080",
+    "desired_qty": 0,
+    "close": 109100.0
+  },
+  {
+    "symbol": "196170",
+    "desired_qty": 0,
+    "close": 363000.0
+  },
+  {
+    "symbol": "214370",
+    "desired_qty": 0,
+    "close": 24600.0
+  },
+  {
+    "symbol": "214450",
+    "desired_qty": 0,
+    "close": 390000.0
+  },
+  {
+    "symbol": "240810",
+    "desired_qty": 0,
+    "close": 23050.0
+  },
+  {
+    "symbol": "247540",
+    "desired_qty": 0,
+    "close": 102400.0
+  },
+  {
+    "symbol": "249420",
+    "desired_qty": 0,
+    "close": 11750.0
+  },
+  {
+    "symbol": "277810",
+    "desired_qty": 0,
+    "close": 281000.0
+  },
+  {
+    "symbol": "298040",
+    "desired_qty": 0,
+    "close": 520000.0
+  },
+  {
+    "symbol": "298380",
+    "desired_qty": 0,
+    "close": 67300.0
+  },
+  {
+    "symbol": "353200",
+    "desired_qty": 0,
+    "close": 14700.0
+  },
+  {
+    "symbol": "357780",
+    "desired_qty": 0,
+    "close": 175800.0
+  }
+]

@@ -21,6 +21,11 @@ class EnvHyperParams:
     buy_cost_pct: float = 0.004
     sell_cost_pct: float = 0.001
     reward_scaling: float = 1e-4
+    exec_mode: str = "MOO"
+    adv_fraction: float = 0.2
+    limit_offset_bps: float = 0.0
+    slippage_bps: float = 0.0
+    day_order_only: bool = True
 
 
 @dataclass(frozen=True)
